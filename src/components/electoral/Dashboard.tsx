@@ -29,6 +29,7 @@ import {
   ChevronDown,
   ChevronRight,
   Download,
+  Crown,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -388,7 +389,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
       )}
 
       {/* ============================================ */}
-      {/* CANDIDATE FACE-OFF: Top 2 Party Comparison   */}
+      {/* CANDIDATE FACE-OFF: Premium Election Results  */}
       {/* ============================================ */}
       {partido1 && partido2 && (
         <motion.div
@@ -396,49 +397,87 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
           animate="visible"
           variants={sectionVariants}
         >
-          <Card className="rounded-2xl shadow-sm border border-gray-100 bg-white overflow-hidden">
-            <CardHeader className="pb-2 pt-5 px-6">
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{
+              background: 'linear-gradient(160deg, #1B2438 0%, #1F2A40 40%, #172033 100%)',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08)',
+            }}
+          >
+            {/* Header */}
+            <div className="px-7 pt-6 pb-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Vote className="w-5 h-5 text-[#FF6B00]" />
-                  <CardTitle className="text-lg font-bold text-gray-800">Resultados Electorales</CardTitle>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-9 h-9 rounded-xl flex items-center justify-center"
+                    style={{ background: 'linear-gradient(135deg, #FF6B00, #E05500)', boxShadow: '0 2px 10px rgba(255,107,0,0.3)' }}
+                  >
+                    <Vote className="w-4.5 h-4.5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white tracking-tight">Resultados Electorales</h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Comparación en tiempo real</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[11px] font-semibold text-gray-500">Actualización en vivo</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.15)' }}>
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-semibold text-emerald-400 tracking-wide">EN VIVO</span>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent className="px-6 pb-6">
-              {/* Two candidate cards side by side */}
+            </div>
+
+            {/* Elegant separator */}
+            <div className="mx-6 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }} />
+
+            {/* Candidate Cards */}
+            <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Candidate 1 - Leader */}
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1, duration: 0.4 }}
-                  className="relative rounded-2xl p-6 border-2 overflow-hidden"
-                  style={{ borderColor: partido1.color + '40', background: `linear-gradient(135deg, ${partido1.color}08 0%, ${partido1.color}03 100%)` }}
+                  transition={{ delay: 0.1, duration: 0.5 }}
+                  className="relative rounded-2xl p-6 overflow-hidden"
+                  style={{
+                    background: `linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)`,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    backdropFilter: 'blur(10px)',
+                  }}
                 >
+                  {/* Glow accent */}
+                  <div
+                    className="absolute top-0 left-0 w-full h-1 rounded-t-2xl"
+                    style={{ background: `linear-gradient(90deg, ${partido1.color}, ${partido1.color}88, transparent)` }}
+                  />
+
                   <div className="flex items-start gap-5">
                     {/* Avatar */}
                     <div className="relative shrink-0">
                       <div
-                        className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-lg"
+                        className="w-[76px] h-[76px] rounded-2xl flex items-center justify-center text-white text-xl font-black"
                         style={{
-                          background: `linear-gradient(135deg, ${partido1.color}, ${partido1.color}CC)`,
-                          boxShadow: `0 4px 16px ${partido1.color}40`,
-                          border: `3px solid ${partido1.color}60`,
+                          background: `linear-gradient(145deg, ${partido1.color}EE, ${partido1.color}BB)`,
+                          boxShadow: `0 6px 24px ${partido1.color}35`,
                         }}
                       >
                         {partido1.siglas.slice(0, 2)}
                       </div>
+                      {/* Crown badge for leader */}
+                      <div
+                        className="absolute -top-2 -right-2 flex items-center justify-center w-7 h-7 rounded-lg shadow-lg"
+                        style={{
+                          background: 'linear-gradient(135deg, #FCD34D, #F59E0B)',
+                          boxShadow: '0 2px 8px rgba(245,158,11,0.4)',
+                        }}
+                      >
+                        <Crown className="w-3.5 h-3.5 text-white" />
+                      </div>
                       {/* Percentage badge */}
                       <div
-                        className="absolute -bottom-1 -right-1 flex items-center justify-center w-10 h-10 rounded-full text-white text-xs font-black shadow-md"
+                        className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center min-w-[52px] h-7 rounded-full text-white text-xs font-black px-2"
                         style={{
                           background: `linear-gradient(135deg, ${partido1.color}, ${partido1.color}CC)`,
-                          boxShadow: `0 2px 8px ${partido1.color}50`,
+                          boxShadow: `0 2px 10px ${partido1.color}40`,
                         }}
                       >
                         {partido1.porcentaje}%
@@ -446,32 +485,27 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                     </div>
                     {/* Info */}
                     <div className="flex-1 min-w-0 pt-1">
-                      <h3 className="text-lg font-bold text-gray-900 leading-tight">{partido1.nombre}</h3>
-                      <p className="text-sm text-gray-500 font-medium mt-0.5">{partido1.siglas}</p>
+                      <h3 className="text-[17px] font-bold text-white leading-tight">{partido1.nombre}</h3>
+                      <p className="text-sm text-slate-400 font-medium mt-0.5">{partido1.siglas}</p>
                       <div className="flex items-baseline gap-2 mt-3">
-                        <span className="text-3xl font-black tracking-tight" style={{ color: partido1.color }}>
+                        <span className="text-[28px] font-black tracking-tight" style={{ color: partido1.color }}>
                           {partido1.votos.toLocaleString()}
                         </span>
-                        <span className="text-sm text-gray-400 font-medium">Votos</span>
+                        <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Votos</span>
                       </div>
                       {/* Progress bar */}
-                      <div className="mt-3 w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: partido1.color + '15' }}>
+                      <div className="mt-3 w-full h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${partido1.porcentaje}%` }}
-                          transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
-                          className="h-full rounded-full"
-                          style={{ background: `linear-gradient(90deg, ${partido1.color}, ${partido1.color}CC)` }}
-                        />
+                          transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
+                          className="h-full rounded-full relative"
+                          style={{ background: `linear-gradient(90deg, ${partido1.color}, ${partido1.color}AA)` }}
+                        >
+                          <div className="absolute right-0 top-0 bottom-0 w-3 rounded-full" style={{ background: `radial-gradient(circle at right, ${partido1.color}60, transparent)` }} />
+                        </motion.div>
                       </div>
                     </div>
-                  </div>
-                  {/* 1st place badge */}
-                  <div
-                    className="absolute top-3 right-3 px-2 py-0.5 rounded-md text-[10px] font-bold text-white"
-                    style={{ backgroundColor: partido1.color }}
-                  >
-                    1° LUGAR
                   </div>
                 </motion.div>
 
@@ -479,29 +513,38 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                 <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2, duration: 0.4 }}
-                  className="relative rounded-2xl p-6 border-2 overflow-hidden"
-                  style={{ borderColor: partido2.color + '40', background: `linear-gradient(135deg, ${partido2.color}08 0%, ${partido2.color}03 100%)` }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                  className="relative rounded-2xl p-6 overflow-hidden"
+                  style={{
+                    background: `linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)`,
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    backdropFilter: 'blur(10px)',
+                  }}
                 >
+                  {/* Glow accent */}
+                  <div
+                    className="absolute top-0 left-0 w-full h-1 rounded-t-2xl"
+                    style={{ background: `linear-gradient(90deg, ${partido2.color}, ${partido2.color}88, transparent)` }}
+                  />
+
                   <div className="flex items-start gap-5">
                     {/* Avatar */}
                     <div className="relative shrink-0">
                       <div
-                        className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-lg"
+                        className="w-[76px] h-[76px] rounded-2xl flex items-center justify-center text-white text-xl font-black"
                         style={{
-                          background: `linear-gradient(135deg, ${partido2.color}, ${partido2.color}CC)`,
-                          boxShadow: `0 4px 16px ${partido2.color}40`,
-                          border: `3px solid ${partido2.color}60`,
+                          background: `linear-gradient(145deg, ${partido2.color}EE, ${partido2.color}BB)`,
+                          boxShadow: `0 6px 24px ${partido2.color}35`,
                         }}
                       >
                         {partido2.siglas.slice(0, 2)}
                       </div>
                       {/* Percentage badge */}
                       <div
-                        className="absolute -bottom-1 -right-1 flex items-center justify-center w-10 h-10 rounded-full text-white text-xs font-black shadow-md"
+                        className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center min-w-[52px] h-7 rounded-full text-white text-xs font-black px-2"
                         style={{
                           background: `linear-gradient(135deg, ${partido2.color}, ${partido2.color}CC)`,
-                          boxShadow: `0 2px 8px ${partido2.color}50`,
+                          boxShadow: `0 2px 10px ${partido2.color}40`,
                         }}
                       >
                         {partido2.porcentaje}%
@@ -509,77 +552,81 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                     </div>
                     {/* Info */}
                     <div className="flex-1 min-w-0 pt-1">
-                      <h3 className="text-lg font-bold text-gray-900 leading-tight">{partido2.nombre}</h3>
-                      <p className="text-sm text-gray-500 font-medium mt-0.5">{partido2.siglas}</p>
+                      <h3 className="text-[17px] font-bold text-white leading-tight">{partido2.nombre}</h3>
+                      <p className="text-sm text-slate-400 font-medium mt-0.5">{partido2.siglas}</p>
                       <div className="flex items-baseline gap-2 mt-3">
-                        <span className="text-3xl font-black tracking-tight" style={{ color: partido2.color }}>
+                        <span className="text-[28px] font-black tracking-tight" style={{ color: partido2.color }}>
                           {partido2.votos.toLocaleString()}
                         </span>
-                        <span className="text-sm text-gray-400 font-medium">Votos</span>
+                        <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">Votos</span>
                       </div>
                       {/* Progress bar */}
-                      <div className="mt-3 w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: partido2.color + '15' }}>
+                      <div className="mt-3 w-full h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${partido2.porcentaje}%` }}
-                          transition={{ duration: 1, ease: 'easeOut', delay: 0.4 }}
-                          className="h-full rounded-full"
-                          style={{ background: `linear-gradient(90deg, ${partido2.color}, ${partido2.color}CC)` }}
-                        />
+                          transition={{ duration: 1.2, ease: 'easeOut', delay: 0.4 }}
+                          className="h-full rounded-full relative"
+                          style={{ background: `linear-gradient(90deg, ${partido2.color}, ${partido2.color}AA)` }}
+                        >
+                          <div className="absolute right-0 top-0 bottom-0 w-3 rounded-full" style={{ background: `radial-gradient(circle at right, ${partido2.color}60, transparent)` }} />
+                        </motion.div>
                       </div>
                     </div>
-                  </div>
-                  {/* 2nd place badge */}
-                  <div
-                    className="absolute top-3 right-3 px-2 py-0.5 rounded-md text-[10px] font-bold text-white"
-                    style={{ backgroundColor: partido2.color }}
-                  >
-                    2° LUGAR
                   </div>
                 </motion.div>
               </div>
 
-              {/* Bottom stats row - Diferencia, Blanco/Nulo, Participación */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
+              {/* Bottom stats row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
                 {/* Diferencia */}
-                <div className="rounded-xl p-4 bg-gray-50 border border-gray-100">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Diferencia</span>
-                  <p className="text-2xl font-black text-gray-900 mt-1">{diferencia.toLocaleString()}</p>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: partido1.color }} />
-                    <span className="text-[11px] font-semibold text-gray-600">{partido1.porcentaje}%</span>
-                    <span className="text-[10px] text-gray-300">vs</span>
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: partido2.color }} />
-                    <span className="text-[11px] font-semibold text-gray-600">{partido2.porcentaje}%</span>
+                <div
+                  className="rounded-xl p-4"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Diferencia</span>
+                  <p className="text-2xl font-black text-white mt-1.5">{diferencia.toLocaleString()}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: partido1.color }} />
+                    <span className="text-[11px] font-semibold text-slate-300">{partido1.porcentaje}%</span>
+                    <span className="text-[10px] text-slate-600">vs</span>
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: partido2.color }} />
+                    <span className="text-[11px] font-semibold text-slate-300">{partido2.porcentaje}%</span>
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1">
+                  <p className="text-[10px] text-slate-500 mt-1.5">
                     {((parseFloat(partido1.porcentaje) - parseFloat(partido2.porcentaje))).toFixed(1)}% margen
                   </p>
                 </div>
 
                 {/* Blanco/Nulo */}
-                <div className="rounded-xl p-4 bg-gray-50 border border-gray-100">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Blanco / Nulo</span>
-                  <div className="flex items-baseline gap-3 mt-1">
-                    <p className="text-2xl font-black text-gray-900">{totalNulos.toLocaleString()}</p>
-                    <div className="h-5 w-px bg-gray-200" />
-                    <p className="text-xl font-bold text-gray-500">{totalBlanco.toLocaleString()}</p>
+                <div
+                  className="rounded-xl p-4"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Blanco / Nulo</span>
+                  <div className="flex items-baseline gap-3 mt-1.5">
+                    <p className="text-2xl font-black text-white">{totalNulos.toLocaleString()}</p>
+                    <div className="h-5 w-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
+                    <p className="text-xl font-bold text-slate-400">{totalBlanco.toLocaleString()}</p>
                   </div>
-                  <p className="text-[10px] text-gray-400 mt-1">No contabilizados</p>
+                  <p className="text-[10px] text-slate-500 mt-1.5">No contabilizados</p>
                 </div>
 
                 {/* Participación */}
-                <div className="rounded-xl p-4 bg-gray-50 border border-gray-100">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Participación</span>
-                  <p className="text-2xl font-black text-emerald-600 mt-1">{participationRate}%</p>
-                  <p className="text-[10px] text-gray-400 mt-1">Censo Electoral</p>
-                  <div className="mt-2 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                <div
+                  className="rounded-xl p-4"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+                >
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.15em]">Participación</span>
+                  <p className="text-2xl font-black text-emerald-400 mt-1.5">{participationRate}%</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Censo Electoral</p>
+                  <div className="mt-2 h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
                     <div className="h-full rounded-full bg-emerald-500" style={{ width: `${participationRate}%` }} />
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </motion.div>
       )}
 
