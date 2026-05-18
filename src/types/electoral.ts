@@ -84,6 +84,8 @@ export interface Ubicacion {
 }
 
 export interface TimelineEntry {
+  evento: ReactNode;
+  departamento: ReactNode;
   hora: string;
   numeroMesa: string;
   personero: string;
