@@ -76,7 +76,7 @@ export default function Home() {
 
   // Main layout with Sidebar + Header + Content
   return (
-    <div className="min-h-screen bg-[#f5f5f7]">
+    <div className="min-h-screen bg-[#fafafa]">
       {/* Sidebar */}
       <Sidebar
         activeModule={activeModule}
@@ -87,7 +87,7 @@ export default function Home() {
       />
 
       {/* Main content area — offset on desktop for sidebar width */}
-      <div className="md:ml-[280px] flex flex-col min-h-screen">
+      <div className="md:ml-[260px] flex flex-col min-h-screen">
         {/* Header */}
         <Header
           moduleName={moduleName}
@@ -96,14 +96,14 @@ export default function Home() {
         />
 
         {/* Page Content */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8">
+        <main className="flex-1 p-4 md:p-5 lg:p-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeModule}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
             >
               {renderContent()}
             </motion.div>
@@ -111,10 +111,10 @@ export default function Home() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-gray-200 bg-white px-4 py-3 md:px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-gray-400">
-            <p>© {new Date().getFullYear()} Sistema Electoral — Plataforma de Monitoreo Electoral en Tiempo Real</p>
-            <div className="flex items-center gap-2">
+        <footer className="border-t border-gray-100 bg-white px-4 py-2.5 md:px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 text-[11px] text-gray-400">
+            <p>© {new Date().getFullYear()} Sistema Electoral — Monitoreo en Tiempo Real</p>
+            <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
               <span>Sistema en línea</span>
             </div>

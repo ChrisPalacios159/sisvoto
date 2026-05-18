@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Menu, Bell, User, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, Bell, User, LogOut, ChevronDown, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -33,7 +33,7 @@ export default function Header({
     .slice(0, 2);
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center border-b border-gray-200 bg-white px-4 md:px-6">
+    <header className="sticky top-0 z-20 flex h-14 items-center border-b border-gray-100 bg-white/95 backdrop-blur-sm px-4 md:px-6">
       {/* Left section */}
       <div className="flex items-center gap-3">
         {/* Mobile menu toggle */}
@@ -41,7 +41,7 @@ export default function Header({
           variant="ghost"
           size="icon"
           onClick={onMenuToggle}
-          className="text-gray-600 hover:bg-gray-100 md:hidden"
+          className="text-gray-500 hover:bg-gray-100 md:hidden"
           aria-label="Abrir men\u00fa"
         >
           <Menu className="h-5 w-5" />
@@ -56,8 +56,8 @@ export default function Header({
           className="flex items-center gap-2"
         >
           <span className="hidden text-sm text-gray-400 sm:inline">M\u00f3dulos</span>
-          <span className="hidden text-sm text-gray-300 sm:inline">/</span>
-          <h1 className="text-base font-semibold text-gray-800 md:text-lg">
+          <span className="hidden text-sm text-gray-200 sm:inline">/</span>
+          <h1 className="text-sm font-bold text-gray-800 md:text-base">
             {moduleName}
           </h1>
         </motion.div>
@@ -65,15 +65,21 @@ export default function Header({
 
       {/* Right section */}
       <div className="ml-auto flex items-center gap-2 md:gap-3">
+        {/* Live indicator */}
+        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 border border-orange-100">
+          <div className="w-1.5 h-1.5 rounded-full bg-[#FF6B00] animate-pulse" />
+          <span className="text-[10px] font-bold text-[#FF6B00]">EN VIVO</span>
+        </div>
+
         {/* Notification bell */}
         <Button
           variant="ghost"
           size="icon"
-          className="relative text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+          className="relative text-gray-400 hover:bg-gray-50 hover:text-gray-600"
           aria-label="Notificaciones"
         >
-          <Bell className="h-5 w-5" />
-          <Badge className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full border-0 bg-[#FF6B00] px-1.5 text-[10px] font-bold text-white shadow-sm">
+          <Bell className="h-[18px] w-[18px]" />
+          <Badge className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border-0 bg-[#FF6B00] px-1 text-[9px] font-bold text-white">
             3
           </Badge>
         </Button>
@@ -83,17 +89,17 @@ export default function Header({
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="flex items-center gap-2 rounded-full pl-2 pr-3 hover:bg-gray-100"
+              className="flex items-center gap-2 rounded-full pl-1.5 pr-2.5 hover:bg-gray-50"
             >
-              <Avatar className="h-8 w-8 border-2 border-[#FF6B00]/30">
-                <AvatarFallback className="bg-[#FF6B00]/15 text-[#FF6B00] text-xs font-bold">
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="bg-[#FF6B00] text-white text-[10px] font-bold">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               <span className="hidden text-sm font-medium text-gray-700 md:inline">
                 {userName}
               </span>
-              <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
+              <ChevronDown className="h-3 w-3 text-gray-400" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">

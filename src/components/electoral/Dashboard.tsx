@@ -3,16 +3,12 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  PieChart,
-  Pie,
-  Cell,
   BarChart,
   Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from 'recharts';
 import {
@@ -26,7 +22,13 @@ import {
   Filter,
   X,
   Search,
+  Radio,
+  CheckCircle2,
+  AlertTriangle,
+  Hourglass,
   ChevronDown,
+  ChevronRight,
+  Download,
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -77,25 +79,26 @@ interface DashboardProps {
 }
 
 // ============================
-// Orange primary
+// Colors
 // ============================
 const ORANGE = '#FF6B00';
+const ORANGE_DARK = '#E05500';
 
 // ============================
 // Animation variants
 // ============================
 const cardVariants = {
-  hidden: { opacity: 0, y: 24 },
+  hidden: { opacity: 0, y: 20 },
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.07, duration: 0.45, ease: 'easeOut' },
+    transition: { delay: i * 0.06, duration: 0.4, ease: 'easeOut' },
   }),
 };
 
 const sectionVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' } },
 };
 
 // ============================
@@ -104,31 +107,20 @@ const sectionVariants = {
 export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) {
   // ---- Local filter state ----
   const [localFiltros, setLocalFiltros] = useState<FiltrosGenerales>(filtros);
+  const [showFilters, setShowFilters] = useState(false);
 
   const updateFiltro = (key: keyof FiltrosGenerales, value: string) => {
     const next = { ...localFiltros, [key]: value };
-    // Reset dependent selectors
-    if (key === 'departamento') {
-      next.provincia = '';
-      next.distrito = '';
-    }
-    if (key === 'provincia') {
-      next.distrito = '';
-    }
+    if (key === 'departamento') { next.provincia = ''; next.distrito = ''; }
+    if (key === 'provincia') { next.distrito = ''; }
     setLocalFiltros(next);
     onFiltrosChange(next);
   };
 
   const clearFiltros = () => {
     const empty: FiltrosGenerales = {
-      departamento: '',
-      provincia: '',
-      distrito: '',
-      localVotacion: '',
-      partidoPolitico: '',
-      fechaInicio: '',
-      fechaFin: '',
-      numeroMesa: '',
+      departamento: '', provincia: '', distrito: '', localVotacion: '',
+      partidoPolitico: '', fechaInicio: '', fechaFin: '', numeroMesa: '',
     };
     setLocalFiltros(empty);
     onFiltrosChange(empty);
@@ -190,622 +182,644 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
     ? Math.round((filteredActas.length / filteredMesas.length) * 100)
     : 0;
 
-  // ---- Pie chart data ----
-  const pieData = porcentajes.map((p) => ({
-    name: p.siglas,
-    fullName: p.nombre,
-    value: p.votos,
-    porcentaje: p.porcentaje,
-    color: p.color,
-  }));
+  const actasValidadas = filteredActas.filter(a => a.estadoValidacion === 'validada').length;
+  const actasObservadas = filteredActas.filter(a => a.estadoValidacion === 'observada').length;
+  const actasPendientes = filteredActas.filter(a => a.estadoValidacion === 'pendiente').length;
 
-  // ---- Bar chart data ----
-  const barData = useMemo(() => {
-    const partidos = partidosMock;
-    return Object.entries(votosPorDepto).map(([depto, partidosVotos]) => {
-      const row: Record<string, string | number> = { departamento: depto };
-      partidos.forEach((p) => {
-        row[p.siglas] = partidosVotos[p.siglas] || 0;
-      });
-      return row;
-    });
-  }, [votosPorDepto]);
+  // ---- Top 2 parties for comparison ----
+  const topPartidos = porcentajes.slice(0, 2);
+  const partido1 = topPartidos[0];
+  const partido2 = topPartidos[1];
+  const diferencia = partido1 && partido2 ? partido1.votos - partido2.votos : 0;
+  const participationRate = totalGeneral > 0 ? ((totalGeneral - totalNulos - totalBlanco) / totalGeneral * 100).toFixed(1) : '0';
 
-  // ---- Chart configs ----
-  const pieChartConfig = useMemo(() => {
-    const cfg: Record<string, { label: string; color: string }> = {};
-    porcentajes.forEach((p) => {
-      cfg[p.siglas] = { label: p.nombre, color: p.color };
-    });
-    return cfg;
-  }, [porcentajes]);
-
-  const barChartConfig = useMemo(() => {
-    const cfg: Record<string, { label: string; color: string }> = {};
-    partidosMock.forEach((p) => {
-      cfg[p.siglas] = { label: p.nombre, color: p.color };
-    });
-    return cfg;
-  }, []);
-
-  // ---- Geographic summary ----
-  const geoSummary = useMemo(() => {
+  // ---- Department distribution data for horizontal bars ----
+  const deptoData = useMemo(() => {
     return DEPARTAMENTOS.map((depto) => {
       const actasDepto = filteredActas.filter((a) => a.departamento === depto);
       if (actasDepto.length === 0) return null;
       const { votosPorPartido: vp, totalGeneral: tg } = calcularVotosTotales(actasDepto);
       const pcts = calcularPorcentajes(vp, tg);
       const leader = pcts[0];
+      const second = pcts[1];
       return {
         departamento: depto,
         totalVotos: tg,
-        leadingParty: leader?.nombre || '',
-        leadingColor: leader?.color || '',
-        leadingPct: leader?.porcentaje || '0',
+        leaderName: leader?.nombre || '',
+        leaderSiglas: leader?.siglas || '',
+        leaderColor: leader?.color || '',
+        leaderPct: parseFloat(leader?.porcentaje || '0'),
+        secondName: second?.nombre || '',
+        secondColor: second?.color || '',
+        secondPct: parseFloat(second?.porcentaje || '0'),
       };
     }).filter(Boolean) as {
       departamento: string;
       totalVotos: number;
-      leadingParty: string;
-      leadingColor: string;
-      leadingPct: string;
+      leaderName: string;
+      leaderSiglas: string;
+      leaderColor: string;
+      leaderPct: number;
+      secondName: string;
+      secondColor: string;
+      secondPct: number;
     }[];
   }, [filteredActas]);
 
-  // ---- Table data ----
+  // ---- Timeline chart data ----
+  const timelineChartData = useMemo(() => {
+    const hourMap: Record<string, number> = {};
+    timelineMock.forEach((entry) => {
+      const hour = entry.hora.split(':')[0] + ':00';
+      hourMap[hour] = (hourMap[hour] || 0) + entry.totalVotos;
+    });
+    return Object.entries(hourMap)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([hour, votos]) => ({ hora: hour, votos }));
+  }, []);
+
+  const timelineChartConfig = useMemo(() => ({
+    votos: { label: 'Votos Registrados', color: ORANGE },
+  }), []);
+
+  // ---- Table data: latest acts ----
   const tableData = useMemo(() => {
     return [...filteredActas]
       .sort((a, b) => `${b.fechaRegistro}${b.horaRegistro}`.localeCompare(`${a.fechaRegistro}${a.horaRegistro}`))
-      .slice(0, 8);
+      .slice(0, 10);
   }, [filteredActas]);
 
   // ---- Provinces/districts for dependent selects ----
   const availableProvincias = localFiltros.departamento
     ? PROVINCIAS_POR_DEPARTAMENTO[localFiltros.departamento] || []
     : [];
-
   const availableDistritos = localFiltros.provincia
     ? DISTRITOS_POR_PROVINCIA[localFiltros.provincia] || []
     : [];
-
-  // ---- Has active filters ----
   const hasFilters = Object.values(localFiltros).some((v) => v !== '');
 
+  // ---- Status badge helper ----
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'validada':
+        return <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50 text-[10px] font-semibold px-2 py-0.5"><CheckCircle2 className="w-3 h-3 mr-1" />Validada</Badge>;
+      case 'observada':
+        return <Badge className="bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50 text-[10px] font-semibold px-2 py-0.5"><AlertTriangle className="w-3 h-3 mr-1" />Observada</Badge>;
+      case 'pendiente':
+        return <Badge className="bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-50 text-[10px] font-semibold px-2 py-0.5"><Hourglass className="w-3 h-3 mr-1" />Pendiente</Badge>;
+      default:
+        return <Badge variant="secondary" className="text-[10px]">{status}</Badge>;
+    }
+  };
+
+  // ---- Time ago helper ----
+  const getTimeAgo = (hora: string) => {
+    const now = new Date();
+    const [h, m] = hora.split(':').map(Number);
+    const minutes = Math.max(1, (now.getHours() - h) * 60 + (now.getMinutes() - m));
+    if (minutes < 60) return `Hace ${minutes} min`;
+    return `Hace ${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+  };
+
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-5">
       {/* ============================================ */}
-      {/* FILTER BAR                                   */}
+      {/* HEADER: Live Transmission Banner             */}
       {/* ============================================ */}
       <motion.div
         initial="hidden"
         animate="visible"
         variants={sectionVariants}
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3"
       >
-        <Card className="rounded-xl shadow-sm border border-gray-100">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ backgroundColor: `${ORANGE}15` }}>
-                  <Filter className="w-4 h-4" style={{ color: ORANGE }} />
-                </div>
-                <CardTitle className="text-base font-semibold text-gray-800">Filtros de Búsqueda</CardTitle>
-              </div>
-              {hasFilters && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFiltros}
-                  className="text-gray-500 hover:text-gray-700 h-8 px-2"
-                >
-                  <X className="w-4 h-4 mr-1" />
-                  Limpiar
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
-              {/* Departamento */}
-              <Select
-                value={localFiltros.departamento}
-                onValueChange={(v) => updateFiltro('departamento', v)}
-              >
-                <SelectTrigger className="w-full bg-white">
-                  <SelectValue placeholder="Departamento" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEPARTAMENTOS.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Provincia */}
-              <Select
-                value={localFiltros.provincia}
-                onValueChange={(v) => updateFiltro('provincia', v)}
-                disabled={!localFiltros.departamento}
-              >
-                <SelectTrigger className="w-full bg-white">
-                  <SelectValue placeholder="Provincia" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableProvincias.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Distrito */}
-              <Select
-                value={localFiltros.distrito}
-                onValueChange={(v) => updateFiltro('distrito', v)}
-                disabled={!localFiltros.provincia}
-              >
-                <SelectTrigger className="w-full bg-white">
-                  <SelectValue placeholder="Distrito" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableDistritos.map((d) => (
-                    <SelectItem key={d} value={d}>
-                      {d}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Partido Político */}
-              <Select
-                value={localFiltros.partidoPolitico}
-                onValueChange={(v) => updateFiltro('partidoPolitico', v)}
-              >
-                <SelectTrigger className="w-full bg-white">
-                  <SelectValue placeholder="Partido Político" />
-                </SelectTrigger>
-                <SelectContent>
-                  {partidosMock.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{ backgroundColor: p.color }}
-                        />
-                        {p.nombre}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Fecha inicio */}
-              <Input
-                type="date"
-                value={localFiltros.fechaInicio}
-                onChange={(e) => updateFiltro('fechaInicio', e.target.value)}
-                className="bg-white"
-                placeholder="Fecha inicio"
-              />
-
-              {/* Fecha fin */}
-              <Input
-                type="date"
-                value={localFiltros.fechaFin}
-                onChange={(e) => updateFiltro('fechaFin', e.target.value)}
-                className="bg-white"
-                placeholder="Fecha fin"
-              />
-
-              {/* Número de mesa */}
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  value={localFiltros.numeroMesa}
-                  onChange={(e) => updateFiltro('numeroMesa', e.target.value)}
-                  placeholder="N° Mesa"
-                  className="bg-white pl-8"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="flex items-center gap-3">
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full text-white text-xs font-bold shadow-md"
+            style={{
+              background: 'linear-gradient(135deg, #FF6B00, #E05500)',
+              boxShadow: '0 2px 8px rgba(255,107,0,0.3)',
+            }}
+          >
+            <Radio className="w-3.5 h-3.5 animate-pulse" />
+            TRANSMISIÓN EN VIVO
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Monitoreo Electoral</h2>
+            <p className="text-xs text-gray-400">Última actualización: hace 2 min</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-gray-600 border-gray-200 hover:bg-gray-50"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="w-4 h-4 mr-1.5" />
+            Filtros
+            <ChevronDown className={`w-3.5 h-3.5 ml-1 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          </Button>
+          <Button
+            size="sm"
+            className="text-white border-0"
+            style={{ background: 'linear-gradient(135deg, #FF6B00, #E05500)' }}
+          >
+            <Download className="w-4 h-4 mr-1.5" />
+            Exportar
+          </Button>
+        </div>
       </motion.div>
 
       {/* ============================================ */}
-      {/* STATS CARDS                                  */}
+      {/* FILTER BAR (collapsible)                     */}
       {/* ============================================ */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {[
-          {
-            title: 'Total Votos Acumulados',
-            value: totalGeneral.toLocaleString(),
-            icon: Vote,
-            accent: ORANGE,
-            trend: true,
-          },
-          {
-            title: 'Mesas Registradas',
-            value: filteredMesas.length.toString(),
-            icon: Hash,
-            accent: ORANGE,
-          },
-          {
-            title: 'Actas Enviadas',
-            value: filteredActas.length.toString(),
-            icon: FileText,
-            accent: ORANGE,
-          },
-          {
-            title: 'Personeros Activos',
-            value: activePersoneros.toString(),
-            icon: Users,
-            accent: ORANGE,
-          },
-          {
-            title: '% Avance',
-            value: `${avance}%`,
-            icon: TrendingUp,
-            accent: ORANGE,
-            progress: avance,
-          },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.title}
-            custom={i}
-            initial="hidden"
-            animate="visible"
-            variants={cardVariants}
+      {showFilters && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card className="rounded-xl shadow-sm border border-gray-100">
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+                <Select value={localFiltros.departamento} onValueChange={(v) => updateFiltro('departamento', v)}>
+                  <SelectTrigger className="w-full bg-white"><SelectValue placeholder="Departamento" /></SelectTrigger>
+                  <SelectContent>{DEPARTAMENTOS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                </Select>
+                <Select value={localFiltros.provincia} onValueChange={(v) => updateFiltro('provincia', v)} disabled={!localFiltros.departamento}>
+                  <SelectTrigger className="w-full bg-white"><SelectValue placeholder="Provincia" /></SelectTrigger>
+                  <SelectContent>{availableProvincias.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                </Select>
+                <Select value={localFiltros.distrito} onValueChange={(v) => updateFiltro('distrito', v)} disabled={!localFiltros.provincia}>
+                  <SelectTrigger className="w-full bg-white"><SelectValue placeholder="Distrito" /></SelectTrigger>
+                  <SelectContent>{availableDistritos.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
+                </Select>
+                <Select value={localFiltros.partidoPolitico} onValueChange={(v) => updateFiltro('partidoPolitico', v)}>
+                  <SelectTrigger className="w-full bg-white"><SelectValue placeholder="Partido Político" /></SelectTrigger>
+                  <SelectContent>
+                    {partidosMock.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+                          {p.nombre}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input type="date" value={localFiltros.fechaInicio} onChange={(e) => updateFiltro('fechaInicio', e.target.value)} className="bg-white" />
+                <Input type="date" value={localFiltros.fechaFin} onChange={(e) => updateFiltro('fechaFin', e.target.value)} className="bg-white" />
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input value={localFiltros.numeroMesa} onChange={(e) => updateFiltro('numeroMesa', e.target.value)} placeholder="N° Mesa" className="bg-white pl-8" />
+                </div>
+              </div>
+              {hasFilters && (
+                <div className="mt-3 flex justify-end">
+                  <Button variant="ghost" size="sm" onClick={clearFiltros} className="text-gray-500 hover:text-gray-700 h-8">
+                    <X className="w-3.5 h-3.5 mr-1" />Limpiar filtros
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* ============================================ */}
+      {/* ROW 1: Big Progress Card + 3 Stats Cards     */}
+      {/* ============================================ */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* ---- Main Progress Card ---- */}
+        <motion.div custom={0} initial="hidden" animate="visible" variants={cardVariants} className="lg:col-span-1">
+          <Card
+            className="rounded-xl shadow-sm border-0 h-full overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, #FF6B00 0%, #E05500 60%, #C44A00 100%)',
+              boxShadow: '0 4px 16px rgba(255,107,0,0.2)',
+            }}
           >
-            <Card className="rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow bg-white h-full">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-500 font-medium truncate">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                    {stat.progress !== undefined && (
-                      <div className="mt-2.5">
-                        <Progress value={stat.progress} className="h-2" />
-                      </div>
-                    )}
-                  </div>
-                  <div
-                    className="flex items-center justify-center w-11 h-11 rounded-xl shrink-0 ml-3"
-                    style={{ backgroundColor: `${stat.accent}15` }}
-                  >
-                    <stat.icon className="w-5 h-5" style={{ color: stat.accent }} />
-                  </div>
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                  <TrendingUp className="w-4 h-4 text-white" />
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
+                <span className="text-sm font-semibold text-white/80">Avance General</span>
+              </div>
+              <p className="text-4xl font-extrabold text-white tracking-tight">{avance}%</p>
+              <p className="text-xs text-white/60 mt-1 mb-4">de actas procesadas</p>
+              <div className="w-full h-2.5 rounded-full bg-white/20 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${avance}%` }}
+                  transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
+                  className="h-full rounded-full bg-white/90"
+                />
+              </div>
+              <div className="flex justify-between mt-2 text-[10px] text-white/50">
+                <span>{filteredActas.length} actas</span>
+                <span>{filteredMesas.length} mesas</span>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* ---- Stat Card: Actas Validadas ---- */}
+        <motion.div custom={1} initial="hidden" animate="visible" variants={cardVariants}>
+          <Card className="rounded-xl shadow-sm border border-gray-100 bg-white h-full">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-500">Actas Validadas</span>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{actasValidadas.toLocaleString()}</p>
+              <div className="flex items-center gap-1 mt-2">
+                <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div className="h-full rounded-full bg-emerald-500" style={{ width: `${filteredActas.length > 0 ? (actasValidadas / filteredActas.length * 100) : 0}%` }} />
+                </div>
+                <span className="text-[10px] font-semibold text-emerald-600">{filteredActas.length > 0 ? Math.round(actasValidadas / filteredActas.length * 100) : 0}%</span>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* ---- Stat Card: Actas Observadas ---- */}
+        <motion.div custom={2} initial="hidden" animate="visible" variants={cardVariants}>
+          <Card className="rounded-xl shadow-sm border border-gray-100 bg-white h-full">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-500">Actas Observadas</span>
+              </div>
+              <p className="text-3xl font-bold text-gray-900">{actasObservadas.toLocaleString()}</p>
+              <div className="flex items-center gap-1 mt-2">
+                <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div className="h-full rounded-full bg-amber-500" style={{ width: `${filteredActas.length > 0 ? (actasObservadas / filteredActas.length * 100) : 0}%` }} />
+                </div>
+                <span className="text-[10px] font-semibold text-amber-600">{filteredActas.length > 0 ? Math.round(actasObservadas / filteredActas.length * 100) : 0}%</span>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* ---- Stat Card: Mesas + Personeros ---- */}
+        <motion.div custom={3} initial="hidden" animate="visible" variants={cardVariants}>
+          <Card className="rounded-xl shadow-sm border border-gray-100 bg-white h-full">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                  <Hash className="w-4 h-4 text-orange-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-500">Mesas / Personeros</span>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">{filteredMesas.length.toLocaleString()}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">mesas registradas</p>
+                </div>
+                <div className="h-8 w-px bg-gray-200" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-700">{activePersoneros}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">personeros activos</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 mt-3">
+                <span className="text-[10px] text-gray-400">{actasPendientes} pendientes</span>
+                <div className="w-1 h-1 rounded-full bg-gray-300" />
+                <span className="text-[10px] text-gray-400">{totalGeneral.toLocaleString()} votos</span>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* ============================================ */}
-      {/* CHARTS ROW: Pie + Bar                        */}
+      {/* ROW 2: Party Comparison + Mini Metrics        */}
       {/* ============================================ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* ---- Donut Chart: Porcentaje por Partido ---- */}
-        <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
-          <Card className="rounded-xl shadow-sm border border-gray-100 bg-white h-full">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* ---- Party Comparison Card ---- */}
+        <motion.div initial="hidden" animate="visible" variants={sectionVariants} className="lg:col-span-2">
+          <Card className="rounded-xl shadow-sm border border-gray-100 bg-white">
             <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ backgroundColor: `${ORANGE}15` }}>
-                  <Vote className="w-4 h-4" style={{ color: ORANGE }} />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold text-gray-800">
-                    Porcentaje por Partido
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-500">
-                    Distribución de votos por partido político
-                  </CardDescription>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                    <Vote className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-bold text-gray-800">Resultados por Partido</CardTitle>
+                    <CardDescription className="text-xs text-gray-500">Comparación de votos acumulados</CardDescription>
+                  </div>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="relative">
-                <ChartContainer config={pieChartConfig} className="mx-auto aspect-square max-h-[320px]">
-                  <PieChart>
-                    <ChartTooltip content={<ChartTooltipContent nameKey="fullName" />} />
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius="55%"
-                      outerRadius="80%"
-                      dataKey="value"
-                      nameKey="name"
-                      strokeWidth={2}
-                      stroke="#fff"
+              <div className="space-y-3">
+                {porcentajes.map((partido, idx) => {
+                  const maxVotos = porcentajes[0]?.votos || 1;
+                  const barWidth = (partido.votos / maxVotos) * 100;
+                  return (
+                    <motion.div
+                      key={partido.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.05, duration: 0.35 }}
                     >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <ChartLegend
-                      content={<ChartLegendContent nameKey="name" />}
-                      className="flex-wrap gap-2"
-                    />
-                  </PieChart>
-                </ChartContainer>
-                {/* Center text overlay */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ top: '-8%' }}>
-                  <div className="text-center">
-                    <p className="text-xl font-bold text-gray-900">{totalGeneral.toLocaleString()}</p>
-                    <p className="text-[10px] text-gray-400 -mt-0.5">votos</p>
-                  </div>
-                </div>
+                      <div className="flex items-center gap-3">
+                        {/* Party color dot + initials */}
+                        <div
+                          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-white text-xs font-bold shadow-sm"
+                          style={{ backgroundColor: partido.color }}
+                        >
+                          {partido.siglas.slice(0, 2)}
+                        </div>
+                        {/* Party info + bar */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-sm font-semibold text-gray-800 truncate">{partido.nombre}</span>
+                            <div className="flex items-center gap-2 shrink-0 ml-2">
+                              <span className="text-sm font-bold text-gray-900">{partido.votos.toLocaleString()}</span>
+                              <span className="text-xs font-semibold px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-600">{partido.porcentaje}%</span>
+                            </div>
+                          </div>
+                          <div className="w-full h-2.5 rounded-full bg-gray-100 overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${barWidth}%` }}
+                              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 + idx * 0.05 }}
+                              className="h-full rounded-full"
+                              style={{ backgroundColor: partido.color }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* ---- Bar Chart: Votos por Partido según Ubicación ---- */}
-        <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
-          <Card className="rounded-xl shadow-sm border border-gray-100 bg-white h-full">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ backgroundColor: `${ORANGE}15` }}>
-                  <MapPin className="w-4 h-4" style={{ color: ORANGE }} />
+        {/* ---- Mini Metrics Column ---- */}
+        <motion.div initial="hidden" animate="visible" variants={sectionVariants} className="space-y-4">
+          {/* Diferencia entre 1ro y 2do */}
+          <Card className="rounded-xl shadow-sm border border-gray-100 bg-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <TrendingUp className="w-4 h-4 text-orange-500" />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Diferencia</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{diferencia.toLocaleString()}</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                {partido1?.nombre || '—'} vs {partido2?.nombre || '—'}
+              </p>
+              {partido1 && (
+                <div className="flex items-center gap-2 mt-2 pt-2 border-t border-gray-100">
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: partido1.color }} />
+                  <span className="text-xs font-medium text-gray-600">{partido1.porcentaje}%</span>
+                  <span className="text-[10px] text-gray-400">—</span>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: partido2?.color || '#ccc' }} />
+                  <span className="text-xs font-medium text-gray-600">{partido2?.porcentaje || '0'}%</span>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Votos nulos y en blanco */}
+          <Card className="rounded-xl shadow-sm border border-gray-100 bg-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-4 h-4 text-gray-400" />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Votos Nulos / Blancos</span>
+              </div>
+              <div className="flex items-baseline gap-4">
                 <div>
-                  <CardTitle className="text-base font-semibold text-gray-800">
-                    Votos por Partido según Ubicación
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-500">
-                    Votos acumulados por departamento
-                  </CardDescription>
+                  <p className="text-2xl font-bold text-gray-900">{totalNulos.toLocaleString()}</p>
+                  <p className="text-[10px] text-gray-400">nulos</p>
+                </div>
+                <div className="h-6 w-px bg-gray-200" />
+                <div>
+                  <p className="text-2xl font-bold text-gray-700">{totalBlanco.toLocaleString()}</p>
+                  <p className="text-[10px] text-gray-400">en blanco</p>
                 </div>
               </div>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={barChartConfig} className="aspect-[4/3] max-h-[320px]">
-                <BarChart data={barData} margin={{ top: 5, right: 5, left: -10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis
-                    dataKey="departamento"
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 11, fill: '#6b7280' }}
-                    interval={0}
-                    angle={-20}
-                    textAnchor="end"
-                    height={50}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fontSize: 11, fill: '#6b7280' }}
-                    width={45}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <ChartLegend content={<ChartLegendContent />} />
-                  {partidosMock.map((p) => (
-                    <Bar
-                      key={p.siglas}
-                      dataKey={p.siglas}
-                      fill={p.color}
-                      radius={[3, 3, 0, 0]}
-                      maxBarSize={24}
-                    />
-                  ))}
-                </BarChart>
-              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          {/* Tasa de participación */}
+          <Card className="rounded-xl shadow-sm border border-gray-100 bg-white">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-4 h-4 text-orange-500" />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Participación</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{participationRate}%</p>
+              <p className="text-[11px] text-gray-400 mt-0.5">votos válidos del total</p>
+              <div className="mt-2 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                <div className="h-full rounded-full bg-orange-500" style={{ width: `${participationRate}%` }} />
+              </div>
             </CardContent>
           </Card>
         </motion.div>
       </div>
 
       {/* ============================================ */}
-      {/* TIMELINE + TABLE ROW                         */}
+      {/* ROW 3: Department Distribution + Acts Table   */}
       {/* ============================================ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* ---- Timeline of Registrations ---- */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* ---- Department Distribution ---- */}
         <motion.div initial="hidden" animate="visible" variants={sectionVariants} className="lg:col-span-1">
           <Card className="rounded-xl shadow-sm border border-gray-100 bg-white h-full">
             <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ backgroundColor: `${ORANGE}15` }}>
-                  <Clock className="w-4 h-4" style={{ color: ORANGE }} />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                    <MapPin className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-bold text-gray-800">Distribución por Departamento</CardTitle>
+                    <CardDescription className="text-xs text-gray-500">Partido líder por región</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-base font-semibold text-gray-800">
-                    Línea de Tiempo
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-500">
-                    Registro de actas en tiempo real
-                  </CardDescription>
-                </div>
+                <Button variant="ghost" size="sm" className="text-[#FF6B00] hover:bg-orange-50 text-xs font-semibold h-7 px-2">
+                  VER MAPA
+                  <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                </Button>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                <div className="relative">
-                  {/* Vertical line */}
-                  <div
-                    className="absolute left-[35px] top-2 bottom-2 w-0.5"
-                    style={{ backgroundColor: '#f3e8d9' }}
-                  />
-                  <div className="space-y-4">
-                    {timelineMock.map((entry, idx) => (
-                      <div key={idx} className="relative flex items-start gap-3">
-                        {/* Time */}
-                        <div className="w-[30px] shrink-0 text-right">
-                          <span className="text-xs font-mono font-medium text-gray-500">
-                            {entry.hora}
-                          </span>
-                        </div>
-                        {/* Dot on line */}
-                        <div className="relative z-10 shrink-0 mt-0.5">
-                          <div
-                            className="w-3 h-3 rounded-full border-2 border-white shadow-sm"
-                            style={{ backgroundColor: entry.partidoColor }}
-                          />
-                        </div>
-                        {/* Card */}
-                        <div className="flex-1 bg-gray-50 rounded-lg p-3 border border-gray-100 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-semibold text-gray-700">
-                              Mesa {entry.numeroMesa}
-                            </span>
-                            <div
-                              className="w-2 h-2 rounded-full shrink-0"
-                              style={{ backgroundColor: entry.partidoColor }}
-                            />
-                            <span className="text-[10px] text-gray-500 truncate">
-                              {entry.partidoMayorVotacion}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-gray-500 truncate">{entry.personero}</p>
-                          <p className="text-[11px] font-semibold text-gray-700 mt-0.5">
-                            {entry.totalVotos.toLocaleString()} votos
-                          </p>
-                        </div>
+              <div className="max-h-[380px] overflow-y-auto pr-1 custom-scrollbar space-y-2.5">
+                {deptoData.map((depto, idx) => (
+                  <motion.div
+                    key={depto.departamento}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.04, duration: 0.3 }}
+                    className="bg-gray-50/80 rounded-lg p-3 border border-gray-100 hover:border-orange-200 transition-colors group"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3 h-3 text-gray-400 group-hover:text-orange-500 transition-colors" />
+                        <span className="text-sm font-semibold text-gray-800">{depto.departamento}</span>
                       </div>
-                    ))}
-                  </div>
-                </div>
+                      <span className="text-[10px] font-medium text-gray-400">{depto.totalVotos.toLocaleString()} votos</span>
+                    </div>
+                    {/* Dual bars */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: depto.leaderColor }} />
+                        <div className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${depto.leaderPct}%`, backgroundColor: depto.leaderColor }} />
+                        </div>
+                        <span className="text-[10px] font-bold shrink-0" style={{ color: depto.leaderColor }}>{depto.leaderPct}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: depto.secondColor }} />
+                        <div className="flex-1 h-2 rounded-full bg-gray-200 overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${depto.secondPct}%`, backgroundColor: depto.secondColor }} />
+                        </div>
+                        <span className="text-[10px] font-bold shrink-0" style={{ color: depto.secondColor }}>{depto.secondPct}%</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <span className="text-[9px] text-gray-400 truncate">{depto.leaderName}</span>
+                      <span className="text-[9px] text-gray-300">vs</span>
+                      <span className="text-[9px] text-gray-400 truncate">{depto.secondName}</span>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
-        {/* ---- Table: Últimas Mesas Registradas ---- */}
+        {/* ---- Latest Acts Table ---- */}
         <motion.div initial="hidden" animate="visible" variants={sectionVariants} className="lg:col-span-2">
           <Card className="rounded-xl shadow-sm border border-gray-100 bg-white h-full">
             <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ backgroundColor: `${ORANGE}15` }}>
-                  <Hash className="w-4 h-4" style={{ color: ORANGE }} />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-bold text-gray-800">Últimas Actas Recibidas</CardTitle>
+                    <CardDescription className="text-xs text-gray-500">{filteredActas.length} actas registradas</CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="text-base font-semibold text-gray-800">
-                    Últimas Mesas Registradas
-                  </CardTitle>
-                  <CardDescription className="text-xs text-gray-500">
-                    {tableData.length} mesas encontradas
-                  </CardDescription>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[10px] font-semibold text-gray-500">En vivo</span>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+              <div className="max-h-[380px] overflow-y-auto custom-scrollbar">
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-b-0" style={{ backgroundColor: `${ORANGE}08` }}>
-                      <TableHead className="text-xs font-semibold" style={{ color: ORANGE }}>N° Mesa</TableHead>
-                      <TableHead className="text-xs font-semibold" style={{ color: ORANGE }}>Departamento</TableHead>
-                      <TableHead className="text-xs font-semibold" style={{ color: ORANGE }}>Provincia</TableHead>
-                      <TableHead className="text-xs font-semibold" style={{ color: ORANGE }}>Distrito</TableHead>
-                      <TableHead className="text-xs font-semibold" style={{ color: ORANGE }}>Local</TableHead>
-                      <TableHead className="text-xs font-semibold" style={{ color: ORANGE }}>Personero</TableHead>
-                      <TableHead className="text-xs font-semibold" style={{ color: ORANGE }}>Hora</TableHead>
-                      <TableHead className="text-xs font-semibold text-right" style={{ color: ORANGE }}>Total Votos</TableHead>
+                    <TableRow className="border-b border-gray-100 hover:bg-transparent">
+                      <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">N° Mesa</TableHead>
+                      <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Ubicación</TableHead>
+                      <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Local</TableHead>
+                      <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Estado</TableHead>
+                      <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Hora</TableHead>
+                      <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Votos</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {tableData.map((acta, idx) => (
                       <TableRow
                         key={acta.id}
-                        className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'} hover:bg-orange-50/40 transition-colors`}
+                        className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'} hover:bg-orange-50/30 border-b border-gray-50 transition-colors cursor-pointer`}
                       >
-                        <TableCell className="text-sm font-medium text-gray-800 py-2.5">
-                          {acta.numeroMesa}
+                        <TableCell className="py-2.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-orange-100 flex items-center justify-center">
+                              <Hash className="w-3 h-3 text-orange-600" />
+                            </div>
+                            <span className="text-sm font-semibold text-gray-800">{acta.numeroMesa}</span>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600 py-2.5">{acta.departamento}</TableCell>
-                        <TableCell className="text-sm text-gray-600 py-2.5">{acta.provincia}</TableCell>
-                        <TableCell className="text-sm text-gray-600 py-2.5">{acta.distrito}</TableCell>
-                        <TableCell className="text-sm text-gray-600 py-2.5 max-w-[140px] truncate">
-                          {acta.localVotacion}
+                        <TableCell className="py-2.5">
+                          <p className="text-sm text-gray-700 font-medium">{acta.departamento}</p>
+                          <p className="text-[10px] text-gray-400">{acta.provincia} / {acta.distrito}</p>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-600 py-2.5">{acta.personeroNombre}</TableCell>
-                        <TableCell className="text-sm text-gray-500 py-2.5 font-mono">{acta.horaRegistro}</TableCell>
-                        <TableCell className="text-sm font-semibold text-gray-800 py-2.5 text-right">
-                          {acta.totalVotos.toLocaleString()}
+                        <TableCell className="py-2.5 text-sm text-gray-500 max-w-[140px] truncate">{acta.localVotacion}</TableCell>
+                        <TableCell className="py-2.5">{getStatusBadge(acta.estadoValidacion)}</TableCell>
+                        <TableCell className="py-2.5">
+                          <p className="text-xs font-mono text-gray-600">{acta.horaRegistro}</p>
+                          <p className="text-[10px] text-gray-400">{getTimeAgo(acta.horaRegistro)}</p>
+                        </TableCell>
+                        <TableCell className="py-2.5 text-right">
+                          <span className="text-sm font-bold text-gray-800">{acta.totalVotos.toLocaleString()}</span>
                         </TableCell>
                       </TableRow>
                     ))}
                     {tableData.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-gray-400">
-                          No se encontraron mesas con los filtros aplicados
+                        <TableCell colSpan={6} className="text-center py-8 text-gray-400 text-sm">
+                          No se encontraron actas con los filtros aplicados
                         </TableCell>
                       </TableRow>
                     )}
                   </TableBody>
                 </Table>
               </div>
+              {tableData.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-gray-100 flex justify-center">
+                  <Button variant="ghost" size="sm" className="text-[#FF6B00] hover:bg-orange-50 text-xs font-semibold">
+                    Cargar más actas
+                    <ChevronDown className="w-3.5 h-3.5 ml-1" />
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
       </div>
 
       {/* ============================================ */}
-      {/* GEOGRAPHIC SUMMARY                           */}
+      {/* ROW 4: Timeline Chart                        */}
       {/* ============================================ */}
       <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
         <Card className="rounded-xl shadow-sm border border-gray-100 bg-white">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ backgroundColor: `${ORANGE}15` }}>
-                <MapPin className="w-4 h-4" style={{ color: ORANGE }} />
+              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                <Clock className="w-4 h-4 text-orange-600" />
               </div>
               <div>
-                <CardTitle className="text-base font-semibold text-gray-800">
-                  Resumen Geográfico
-                </CardTitle>
-                <CardDescription className="text-xs text-gray-500">
-                  Resultados por departamento
-                </CardDescription>
+                <CardTitle className="text-base font-bold text-gray-800">Línea de Tiempo - Registro de Actas</CardTitle>
+                <CardDescription className="text-xs text-gray-500">Votos registrados por hora a lo largo del día</CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {geoSummary.map((depto, idx) => (
-                <motion.div
-                  key={depto.departamento}
-                  custom={idx}
-                  initial="hidden"
-                  animate="visible"
-                  variants={cardVariants}
-                >
-                  <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 hover:border-orange-200 hover:shadow-sm transition-all group">
-                    <div className="flex items-center gap-2 mb-2">
-                      <MapPin className="w-3.5 h-3.5 text-gray-400 group-hover:text-orange-500 transition-colors" />
-                      <h4 className="text-sm font-semibold text-gray-800 truncate">
-                        {depto.departamento}
-                      </h4>
-                    </div>
-                    <p className="text-xl font-bold text-gray-900">
-                      {depto.totalVotos.toLocaleString()}
-                    </p>
-                    <p className="text-[11px] text-gray-500 mt-0.5">votos totales</p>
-                    <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-gray-200/60">
-                      <div
-                        className="w-3 h-3 rounded-full shrink-0"
-                        style={{ backgroundColor: depto.leadingColor }}
-                      />
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-gray-700 truncate">
-                          {depto.leadingParty}
-                        </p>
-                        <p className="text-[10px] text-gray-400">{depto.leadingPct}%</p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-              {geoSummary.length === 0 && (
-                <div className="col-span-full text-center py-8 text-gray-400 text-sm">
-                  No hay datos geográficos para los filtros aplicados
-                </div>
-              )}
-            </div>
+            <ChartContainer config={timelineChartConfig} className="aspect-[4/1] max-h-[200px]">
+              <BarChart data={timelineChartData} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="hora"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af' }}
+                  width={50}
+                />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="votos" fill={ORANGE} radius={[4, 4, 0, 0]} maxBarSize={48} />
+              </BarChart>
+            </ChartContainer>
           </CardContent>
         </Card>
       </motion.div>
