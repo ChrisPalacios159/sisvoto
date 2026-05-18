@@ -76,7 +76,7 @@ export default function Home() {
 
   // Main layout with Sidebar + Header + Content
   return (
-    <div className="min-h-screen bg-[#fafafa]">
+    <div className="min-h-screen" style={{ background: 'linear-gradient(180deg, #FFF8F0 0%, #FAFAFA 50%, #F5F0EB 100%)' }}>
       {/* Sidebar */}
       <Sidebar
         activeModule={activeModule}
@@ -111,7 +111,7 @@ export default function Home() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-gray-100 bg-white px-4 py-2.5 md:px-6">
+        <footer className="border-t px-4 py-2.5 md:px-6" style={{ borderColor: 'rgba(255,107,0,0.1)', background: 'linear-gradient(135deg, #FFF8F0, #FFFFFF)' }}>
           <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 text-[11px] text-gray-400">
             <p>© {new Date().getFullYear()} Sistema Electoral — Monitoreo en Tiempo Real</p>
             <div className="flex items-center gap-1.5">

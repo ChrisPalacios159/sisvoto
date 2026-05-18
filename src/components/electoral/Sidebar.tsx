@@ -13,7 +13,7 @@ import {
   Shield,
   LogOut,
   X,
-  ChevronRight,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -68,45 +68,62 @@ export default function Sidebar({
   };
 
   const sidebarContent = (
-    <div className="flex h-full flex-col bg-white border-r border-gray-200/80">
-      {/* Logo / Brand - Orange gradient header */}
-      <div className="relative overflow-hidden">
+    <div
+      className="flex h-full flex-col"
+      style={{
+        background: 'linear-gradient(180deg, #1E1008 0%, #2A1408 30%, #1A0D06 100%)',
+      }}
+    >
+      {/* Logo / Brand - Prominent Orange Header */}
+      <div className="relative overflow-hidden px-5 pt-6 pb-5">
+        {/* Decorative circles */}
         <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(135deg, #FF6B00 0%, #FF8C38 60%, #FFB347 100%)',
-          }}
+          className="absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-20"
+          style={{ background: 'radial-gradient(circle, #FF6B00 0%, transparent 70%)' }}
         />
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: 'radial-gradient(circle at 80% 20%, white 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-        }} />
-        <div className="relative z-10 flex items-center gap-3 px-5 py-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm border border-white/25 shadow-lg">
-            <Shield className="h-5 w-5 text-white" strokeWidth={2} />
+        <div
+          className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #FF8C38 0%, transparent 70%)' }}
+        />
+
+        <div className="relative z-10 flex items-center gap-3">
+          <div
+            className="flex h-11 w-11 items-center justify-center rounded-xl shadow-lg"
+            style={{
+              background: 'linear-gradient(135deg, #FF6B00 0%, #E05500 100%)',
+              boxShadow: '0 4px 14px rgba(255,107,0,0.4)',
+            }}
+          >
+            <Shield className="h-5 w-5 text-white" strokeWidth={2.5} />
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-bold text-white tracking-tight">Sistema Electoral</span>
-            <span className="text-[11px] font-medium text-white/70">Monitoreo en Tiempo Real</span>
+            <span className="text-[15px] font-bold text-white tracking-tight">Sistema Electoral</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <Zap className="w-3 h-3 text-orange-400" />
+              <span className="text-[11px] font-medium text-orange-300/80">Monitoreo en Vivo</span>
+            </div>
           </div>
           {/* Close button on mobile */}
           <Button
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="ml-auto text-white/70 hover:bg-white/20 hover:text-white md:hidden"
+            className="ml-auto text-white/50 hover:bg-white/10 hover:text-white md:hidden"
           >
             <X className="h-5 w-5" />
           </Button>
         </div>
       </div>
 
+      {/* Subtle separator */}
+      <div className="mx-4 h-px bg-gradient-to-r from-transparent via-orange-500/30 to-transparent" />
+
       {/* Navigation */}
       <ScrollArea className="flex-1 px-3 py-4">
         <div className="mb-3 px-3">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Menú Principal</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-orange-400/60">Menú Principal</span>
         </div>
-        <nav className="flex flex-col gap-0.5">
+        <nav className="flex flex-col gap-1">
           {NAV_ITEMS.map((item) => {
             const isActive = activeModule === item.id;
             const Icon = item.icon;
@@ -120,59 +137,76 @@ export default function Sidebar({
                   transition-all duration-200 ease-in-out
                   ${
                     isActive
-                      ? 'bg-orange-50 text-[#FF6B00]'
-                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+                      ? 'text-white shadow-lg'
+                      : 'text-white/50 hover:text-white/90 hover:bg-white/5'
                   }
                 `}
+                style={isActive ? {
+                  background: 'linear-gradient(135deg, rgba(255,107,0,0.25) 0%, rgba(255,107,0,0.10) 100%)',
+                  boxShadow: '0 2px 12px rgba(255,107,0,0.15), inset 0 1px 0 rgba(255,255,255,0.06)',
+                } : undefined}
               >
                 {/* Active left indicator */}
                 {isActive && (
                   <motion.div
                     layoutId="sidebar-active-indicator"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-6 rounded-r-full bg-[#FF6B00]"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-7 rounded-r-full"
+                    style={{
+                      background: 'linear-gradient(180deg, #FF8C38, #FF6B00)',
+                      boxShadow: '0 0 8px rgba(255,107,0,0.5)',
+                    }}
                     transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   />
                 )}
-                <div className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200 ${
-                  isActive ? 'bg-[#FF6B00]/10' : 'group-hover:bg-gray-100'
-                }`}>
+                <div
+                  className={`flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200 ${
+                    isActive ? 'shadow-sm' : 'group-hover:bg-white/5'
+                  }`}
+                  style={isActive ? {
+                    background: 'linear-gradient(135deg, #FF6B00 0%, #E05500 100%)',
+                    boxShadow: '0 2px 8px rgba(255,107,0,0.3)',
+                  } : undefined}
+                >
                   <Icon className={`h-[18px] w-[18px] transition-transform duration-200 ${
-                    isActive ? 'scale-110' : 'group-hover:scale-105'
+                    isActive ? 'scale-110 text-white' : 'text-white/60 group-hover:text-white/80 group-hover:scale-105'
                   }`} />
                 </div>
                 <span className="flex-1 text-left">{item.label}</span>
-                {isActive && (
-                  <ChevronRight className="h-4 w-4 text-[#FF6B00]/50" />
-                )}
               </button>
             );
           })}
         </nav>
 
-        <Separator className="my-4 bg-gray-100" />
+        <div className="mx-2 my-4 h-px bg-gradient-to-r from-transparent via-orange-500/20 to-transparent" />
 
         <div className="mb-3 px-3">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Cuenta</span>
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-orange-400/60">Cuenta</span>
         </div>
       </ScrollArea>
 
       {/* User Section */}
-      <div className="px-3 py-3 border-t border-gray-100">
-        <div className="flex items-center gap-3 rounded-xl bg-gray-50 px-3 py-3 border border-gray-100">
-          <Avatar className="h-9 w-9 border-2 border-[#FF6B00]/30">
-            <AvatarFallback className="bg-[#FF6B00] text-white text-sm font-bold">
+      <div className="px-3 py-3" style={{ borderTop: '1px solid rgba(255,107,0,0.12)' }}>
+        <div
+          className="flex items-center gap-3 rounded-xl px-3 py-3"
+          style={{ background: 'rgba(255,107,0,0.08)', border: '1px solid rgba(255,107,0,0.12)' }}
+        >
+          <Avatar className="h-9 w-9 border-2 border-orange-400/40">
+            <AvatarFallback
+              className="text-white text-sm font-bold"
+              style={{ background: 'linear-gradient(135deg, #FF6B00, #E05500)' }}
+            >
               AD
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-1 flex-col overflow-hidden">
-            <span className="truncate text-sm font-semibold text-gray-700">Administrador</span>
-            <span className="truncate text-[11px] text-gray-400">admin@electoral.gob</span>
+            <span className="truncate text-sm font-semibold text-white/90">Administrador</span>
+            <span className="truncate text-[11px] text-white/40">admin@electoral.gob</span>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={onLogout}
-            className="h-8 w-8 shrink-0 text-gray-400 hover:bg-red-50 hover:text-red-500"
+            className="h-8 w-8 shrink-0 text-white/30 hover:bg-red-500/20 hover:text-red-400"
             title="Cerrar sesi\u00f3n"
           >
             <LogOut className="h-4 w-4" />
@@ -185,7 +219,9 @@ export default function Sidebar({
   return (
     <>
       {/* Desktop sidebar — always visible, fixed position */}
-      <aside className="hidden md:flex md:w-[260px] md:shrink-0 md:flex-col fixed inset-y-0 left-0 z-30">
+      <aside className="hidden md:flex md:w-[260px] md:shrink-0 md:flex-col fixed inset-y-0 left-0 z-30"
+        style={{ boxShadow: '4px 0 20px rgba(0,0,0,0.3)' }}
+      >
         {sidebarContent}
       </aside>
 
@@ -199,7 +235,7 @@ export default function Sidebar({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
               onClick={onClose}
             />
 
@@ -210,6 +246,7 @@ export default function Sidebar({
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               className="fixed inset-y-0 left-0 z-50 w-[260px] md:hidden"
+              style={{ boxShadow: '4px 0 20px rgba(0,0,0,0.3)' }}
             >
               {sidebarContent}
             </motion.aside>

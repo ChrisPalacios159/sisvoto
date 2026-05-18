@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Menu, Bell, User, LogOut, ChevronDown, Radio } from 'lucide-react';
+import { Menu, Bell, User, LogOut, ChevronDown, Radio, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -33,7 +33,13 @@ export default function Header({
     .slice(0, 2);
 
   return (
-    <header className="sticky top-0 z-20 flex h-14 items-center border-b border-gray-100 bg-white/95 backdrop-blur-sm px-4 md:px-6">
+    <header
+      className="sticky top-0 z-20 flex h-14 items-center px-4 md:px-6"
+      style={{
+        background: 'linear-gradient(135deg, #FF6B00 0%, #E05500 40%, #C44A00 100%)',
+        boxShadow: '0 2px 12px rgba(255,107,0,0.2)',
+      }}
+    >
       {/* Left section */}
       <div className="flex items-center gap-3">
         {/* Mobile menu toggle */}
@@ -41,7 +47,7 @@ export default function Header({
           variant="ghost"
           size="icon"
           onClick={onMenuToggle}
-          className="text-gray-500 hover:bg-gray-100 md:hidden"
+          className="text-white/80 hover:bg-white/15 hover:text-white md:hidden"
           aria-label="Abrir men\u00fa"
         >
           <Menu className="h-5 w-5" />
@@ -55,9 +61,9 @@ export default function Header({
           transition={{ duration: 0.25, ease: 'easeOut' }}
           className="flex items-center gap-2"
         >
-          <span className="hidden text-sm text-gray-400 sm:inline">M\u00f3dulos</span>
-          <span className="hidden text-sm text-gray-200 sm:inline">/</span>
-          <h1 className="text-sm font-bold text-gray-800 md:text-base">
+          <span className="hidden text-sm text-white/50 sm:inline">M\u00f3dulos</span>
+          <span className="hidden text-sm text-white/30 sm:inline">/</span>
+          <h1 className="text-sm font-bold text-white md:text-base">
             {moduleName}
           </h1>
         </motion.div>
@@ -66,20 +72,20 @@ export default function Header({
       {/* Right section */}
       <div className="ml-auto flex items-center gap-2 md:gap-3">
         {/* Live indicator */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-50 border border-orange-100">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#FF6B00] animate-pulse" />
-          <span className="text-[10px] font-bold text-[#FF6B00]">EN VIVO</span>
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/10">
+          <Radio className="w-3 h-3 text-white animate-pulse" />
+          <span className="text-[10px] font-bold text-white tracking-wide">EN VIVO</span>
         </div>
 
         {/* Notification bell */}
         <Button
           variant="ghost"
           size="icon"
-          className="relative text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+          className="relative text-white/70 hover:bg-white/15 hover:text-white"
           aria-label="Notificaciones"
         >
           <Bell className="h-[18px] w-[18px]" />
-          <Badge className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border-0 bg-[#FF6B00] px-1 text-[9px] font-bold text-white">
+          <Badge className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border-0 bg-white px-1 text-[9px] font-bold text-[#E05500]">
             3
           </Badge>
         </Button>
@@ -89,17 +95,17 @@ export default function Header({
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="flex items-center gap-2 rounded-full pl-1.5 pr-2.5 hover:bg-gray-50"
+              className="flex items-center gap-2 rounded-full pl-1.5 pr-2.5 hover:bg-white/15 text-white"
             >
-              <Avatar className="h-7 w-7">
-                <AvatarFallback className="bg-[#FF6B00] text-white text-[10px] font-bold">
+              <Avatar className="h-7 w-7 border-2 border-white/30">
+                <AvatarFallback className="bg-white/20 text-white text-[10px] font-bold border-0">
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <span className="hidden text-sm font-medium text-gray-700 md:inline">
+              <span className="hidden text-sm font-medium md:inline">
                 {userName}
               </span>
-              <ChevronDown className="h-3 w-3 text-gray-400" />
+              <ChevronDown className="h-3 w-3 text-white/50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">

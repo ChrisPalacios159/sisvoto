@@ -388,6 +388,202 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
       )}
 
       {/* ============================================ */}
+      {/* CANDIDATE FACE-OFF: Top 2 Party Comparison   */}
+      {/* ============================================ */}
+      {partido1 && partido2 && (
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={sectionVariants}
+        >
+          <Card className="rounded-2xl shadow-sm border border-gray-100 bg-white overflow-hidden">
+            <CardHeader className="pb-2 pt-5 px-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Vote className="w-5 h-5 text-[#FF6B00]" />
+                  <CardTitle className="text-lg font-bold text-gray-800">Resultados Electorales</CardTitle>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-[11px] font-semibold text-gray-500">Actualización en vivo</span>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pb-6">
+              {/* Two candidate cards side by side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Candidate 1 - Leader */}
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1, duration: 0.4 }}
+                  className="relative rounded-2xl p-6 border-2 overflow-hidden"
+                  style={{ borderColor: partido1.color + '40', background: `linear-gradient(135deg, ${partido1.color}08 0%, ${partido1.color}03 100%)` }}
+                >
+                  <div className="flex items-start gap-5">
+                    {/* Avatar */}
+                    <div className="relative shrink-0">
+                      <div
+                        className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-lg"
+                        style={{
+                          background: `linear-gradient(135deg, ${partido1.color}, ${partido1.color}CC)`,
+                          boxShadow: `0 4px 16px ${partido1.color}40`,
+                          border: `3px solid ${partido1.color}60`,
+                        }}
+                      >
+                        {partido1.siglas.slice(0, 2)}
+                      </div>
+                      {/* Percentage badge */}
+                      <div
+                        className="absolute -bottom-1 -right-1 flex items-center justify-center w-10 h-10 rounded-full text-white text-xs font-black shadow-md"
+                        style={{
+                          background: `linear-gradient(135deg, ${partido1.color}, ${partido1.color}CC)`,
+                          boxShadow: `0 2px 8px ${partido1.color}50`,
+                        }}
+                      >
+                        {partido1.porcentaje}%
+                      </div>
+                    </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0 pt-1">
+                      <h3 className="text-lg font-bold text-gray-900 leading-tight">{partido1.nombre}</h3>
+                      <p className="text-sm text-gray-500 font-medium mt-0.5">{partido1.siglas}</p>
+                      <div className="flex items-baseline gap-2 mt-3">
+                        <span className="text-3xl font-black tracking-tight" style={{ color: partido1.color }}>
+                          {partido1.votos.toLocaleString()}
+                        </span>
+                        <span className="text-sm text-gray-400 font-medium">Votos</span>
+                      </div>
+                      {/* Progress bar */}
+                      <div className="mt-3 w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: partido1.color + '15' }}>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${partido1.porcentaje}%` }}
+                          transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+                          className="h-full rounded-full"
+                          style={{ background: `linear-gradient(90deg, ${partido1.color}, ${partido1.color}CC)` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  {/* 1st place badge */}
+                  <div
+                    className="absolute top-3 right-3 px-2 py-0.5 rounded-md text-[10px] font-bold text-white"
+                    style={{ backgroundColor: partido1.color }}
+                  >
+                    1° LUGAR
+                  </div>
+                </motion.div>
+
+                {/* Candidate 2 - Second */}
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2, duration: 0.4 }}
+                  className="relative rounded-2xl p-6 border-2 overflow-hidden"
+                  style={{ borderColor: partido2.color + '40', background: `linear-gradient(135deg, ${partido2.color}08 0%, ${partido2.color}03 100%)` }}
+                >
+                  <div className="flex items-start gap-5">
+                    {/* Avatar */}
+                    <div className="relative shrink-0">
+                      <div
+                        className="w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-lg"
+                        style={{
+                          background: `linear-gradient(135deg, ${partido2.color}, ${partido2.color}CC)`,
+                          boxShadow: `0 4px 16px ${partido2.color}40`,
+                          border: `3px solid ${partido2.color}60`,
+                        }}
+                      >
+                        {partido2.siglas.slice(0, 2)}
+                      </div>
+                      {/* Percentage badge */}
+                      <div
+                        className="absolute -bottom-1 -right-1 flex items-center justify-center w-10 h-10 rounded-full text-white text-xs font-black shadow-md"
+                        style={{
+                          background: `linear-gradient(135deg, ${partido2.color}, ${partido2.color}CC)`,
+                          boxShadow: `0 2px 8px ${partido2.color}50`,
+                        }}
+                      >
+                        {partido2.porcentaje}%
+                      </div>
+                    </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0 pt-1">
+                      <h3 className="text-lg font-bold text-gray-900 leading-tight">{partido2.nombre}</h3>
+                      <p className="text-sm text-gray-500 font-medium mt-0.5">{partido2.siglas}</p>
+                      <div className="flex items-baseline gap-2 mt-3">
+                        <span className="text-3xl font-black tracking-tight" style={{ color: partido2.color }}>
+                          {partido2.votos.toLocaleString()}
+                        </span>
+                        <span className="text-sm text-gray-400 font-medium">Votos</span>
+                      </div>
+                      {/* Progress bar */}
+                      <div className="mt-3 w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: partido2.color + '15' }}>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${partido2.porcentaje}%` }}
+                          transition={{ duration: 1, ease: 'easeOut', delay: 0.4 }}
+                          className="h-full rounded-full"
+                          style={{ background: `linear-gradient(90deg, ${partido2.color}, ${partido2.color}CC)` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  {/* 2nd place badge */}
+                  <div
+                    className="absolute top-3 right-3 px-2 py-0.5 rounded-md text-[10px] font-bold text-white"
+                    style={{ backgroundColor: partido2.color }}
+                  >
+                    2° LUGAR
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* Bottom stats row - Diferencia, Blanco/Nulo, Participación */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
+                {/* Diferencia */}
+                <div className="rounded-xl p-4 bg-gray-50 border border-gray-100">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Diferencia</span>
+                  <p className="text-2xl font-black text-gray-900 mt-1">{diferencia.toLocaleString()}</p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: partido1.color }} />
+                    <span className="text-[11px] font-semibold text-gray-600">{partido1.porcentaje}%</span>
+                    <span className="text-[10px] text-gray-300">vs</span>
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: partido2.color }} />
+                    <span className="text-[11px] font-semibold text-gray-600">{partido2.porcentaje}%</span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    {((parseFloat(partido1.porcentaje) - parseFloat(partido2.porcentaje))).toFixed(1)}% margen
+                  </p>
+                </div>
+
+                {/* Blanco/Nulo */}
+                <div className="rounded-xl p-4 bg-gray-50 border border-gray-100">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Blanco / Nulo</span>
+                  <div className="flex items-baseline gap-3 mt-1">
+                    <p className="text-2xl font-black text-gray-900">{totalNulos.toLocaleString()}</p>
+                    <div className="h-5 w-px bg-gray-200" />
+                    <p className="text-xl font-bold text-gray-500">{totalBlanco.toLocaleString()}</p>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-1">No contabilizados</p>
+                </div>
+
+                {/* Participación */}
+                <div className="rounded-xl p-4 bg-gray-50 border border-gray-100">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Participación</span>
+                  <p className="text-2xl font-black text-emerald-600 mt-1">{participationRate}%</p>
+                  <p className="text-[10px] text-gray-400 mt-1">Censo Electoral</p>
+                  <div className="mt-2 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${participationRate}%` }} />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* ============================================ */}
       {/* ROW 1: Big Progress Card + 3 Stats Cards     */}
       {/* ============================================ */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
