@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { Variants } from 'framer-motion';
 import {
   BarChart,
   Bar,
@@ -63,7 +64,6 @@ import {
   actasMock,
   mesasMock,
   personerosMock,
-  timelineMock,
   calcularVotosTotales,
   calcularPorcentajes,
 } from '@/data/mock';
@@ -73,34 +73,203 @@ interface DashboardProps {
   onFiltrosChange: (filtros: FiltrosGenerales) => void;
 }
 
+interface CandidateDashboard {
+  id: string;
+  displayName: string;
+  partyName: string;
+  partyShortName: string;
+  votes: number;
+  photo: string;
+  logo: string;
+  color: string;
+  darkColor: string;
+  accent: string;
+  progress: number;
+}
+
+interface TerritorialItem {
+  departamento: string;
+  fuerzaPopular: number;
+  partidoDelPueblo: number;
+}
+
+interface LiveStats {
+  actasValidadas: number;
+  actasObservadas: number;
+  actasPendientes: number;
+  mesasRegistradas: number;
+  mesasPendientes: number;
+  blancoNulo: number;
+  activePersoneros: number;
+}
+
+interface DepartmentVotes {
+  departamento: string;
+  votos: number;
+}
+
+interface TimelineItem {
+  hora: string;
+  votos: number;
+}
+
+interface LiveActaRow {
+  id: string;
+  ubicacion: string;
+  centro: string;
+  estado: 'validada' | 'observada' | 'pendiente';
+  mesa: string;
+  horaRegistro: string;
+}
+
 const PRIMARY = '#F97316';
 const PRIMARY_DARK = '#C2410C';
 const PRIMARY_LIGHT = '#FDBA74';
-const PRIMARY_SOFT = '#FFF7ED';
-const SECONDARY = '#7C2D12';
-const TEXT = '#24130A';
+const GREEN = '#16A34A';
+const GREEN_DARK = '#15803D';
+const GREEN_LIGHT = '#DCFCE7';
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 18 },
-  visible: (i: number) => ({
+const MAIN_CANDIDATES: CandidateDashboard[] = [
+  {
+    id: 'keiko',
+    displayName: 'Keiko Fujimori',
+    partyName: 'Fuerza Popular',
+    partyShortName: 'FP',
+    votes: 8860200,
+    photo: '/images/keiko.jpeg',
+    logo: '/images/k.png',
+    color: PRIMARY,
+    darkColor: PRIMARY_DARK,
+    accent: '#FFF7ED',
+    progress: 65,
+  },
+  {
+    id: 'roberto',
+    displayName: 'Roberto Sánchez',
+    partyName: 'Partido del Pueblo',
+    partyShortName: 'JP',
+    votes: 8790500,
+    photo: '/images/roberto.jpeg',
+    logo: '/images/jp.jpg',
+    color: GREEN,
+    darkColor: GREEN_DARK,
+    accent: GREEN_LIGHT,
+    progress: 58,
+  },
+];
+
+const INITIAL_TERRITORIAL_DATA: TerritorialItem[] = [
+  { departamento: 'Lima', fuerzaPopular: 65.2, partidoDelPueblo: 34.8 },
+  { departamento: 'Cusco', fuerzaPopular: 58.6, partidoDelPueblo: 41.4 },
+  { departamento: 'La Libertad', fuerzaPopular: 61.8, partidoDelPueblo: 38.2 },
+  { departamento: 'Piura', fuerzaPopular: 55.4, partidoDelPueblo: 44.6 },
+];
+
+const INITIAL_DEPARTMENT_VOTES: DepartmentVotes[] = [
+  { departamento: 'Lima', votos: 1480200 },
+  { departamento: 'Cusco', votos: 842500 },
+  { departamento: 'La Libertad', votos: 735800 },
+  { departamento: 'Piura', votos: 612400 },
+  { departamento: 'Arequipa', votos: 558700 },
+  { departamento: 'Junín', votos: 421900 },
+];
+
+const INITIAL_TIMELINE: TimelineItem[] = [
+  { hora: '08:00 AM', votos: 180000 },
+  { hora: '09:00 AM', votos: 260000 },
+  { hora: '10:00 AM', votos: 340000 },
+  { hora: '11:00 AM', votos: 440000 },
+  { hora: '12:00 PM', votos: 570000 },
+  { hora: '01:00 PM', votos: 680000 },
+  { hora: '02:00 PM', votos: 790000 },
+  { hora: '03:00 PM', votos: 925000 },
+];
+
+const INITIAL_LIVE_ACTAS: LiveActaRow[] = [
+  {
+    id: '#ACT-92840-A',
+    ubicacion: 'Lima, Miraflores',
+    centro: 'Colegio San Agustín',
+    estado: 'validada',
+    mesa: '048291',
+    horaRegistro: 'Hace 1 min',
+  },
+  {
+    id: '#ACT-92839-B',
+    ubicacion: 'Arequipa, Cercado',
+    centro: 'I.E. Independencia',
+    estado: 'validada',
+    mesa: '012354',
+    horaRegistro: 'Hace 4 min',
+  },
+  {
+    id: '#ACT-92838-C',
+    ubicacion: 'Cusco, Wanchaq',
+    centro: 'U.N. San Antonio Abad',
+    estado: 'pendiente',
+    mesa: '085421',
+    horaRegistro: 'Hace 7 min',
+  },
+  {
+    id: '#ACT-92837-D',
+    ubicacion: 'Piura, Castilla',
+    centro: 'I.E. Miguel Cortés',
+    estado: 'observada',
+    mesa: '032158',
+    horaRegistro: 'Hace 12 min',
+  },
+];
+
+const cardVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 18,
+  },
+  visible: (i: number = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.05, duration: 0.35, ease: 'easeOut' },
+    transition: {
+      delay: i * 0.05,
+      duration: 0.35,
+      ease: [0.16, 1, 0.3, 1],
+    },
   }),
 };
 
-const sectionVariants = {
-  hidden: { opacity: 0, y: 22 },
+const sectionVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 22,
+  },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: 'easeOut' },
+    transition: {
+      duration: 0.4,
+      ease: [0.16, 1, 0.3, 1],
+    },
   },
 };
 
 export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) {
   const [localFiltros, setLocalFiltros] = useState<FiltrosGenerales>(filtros);
   const [showFilters, setShowFilters] = useState(false);
+
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [liveCandidates, setLiveCandidates] = useState<CandidateDashboard[]>(MAIN_CANDIDATES);
+  const [liveStats, setLiveStats] = useState<LiveStats>({
+    actasValidadas: 82400,
+    actasObservadas: 1800,
+    actasPendientes: 920,
+    mesasRegistradas: 84200,
+    mesasPendientes: 1800,
+    blancoNulo: 350000,
+    activePersoneros: 128,
+  });
+  const [liveTerritorialData, setLiveTerritorialData] = useState<TerritorialItem[]>(INITIAL_TERRITORIAL_DATA);
+  const [liveDepartmentVotes, setLiveDepartmentVotes] = useState<DepartmentVotes[]>(INITIAL_DEPARTMENT_VOTES);
+  const [liveTimeline, setLiveTimeline] = useState<TimelineItem[]>(INITIAL_TIMELINE);
+  const [liveActas, setLiveActas] = useState<LiveActaRow[]>(INITIAL_LIVE_ACTAS);
 
   const updateFiltro = (key: keyof FiltrosGenerales, value: string) => {
     const next = { ...localFiltros, [key]: value };
@@ -134,6 +303,102 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
     onFiltrosChange(empty);
   };
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setLastUpdate(new Date());
+
+      setLiveCandidates((prev) =>
+        prev.map((candidate) => {
+          const voteIncrement = candidate.id === 'keiko'
+            ? randomInt(60, 180)
+            : randomInt(45, 165);
+
+          const progressIncrement = candidate.id === 'keiko'
+            ? randomFloat(0.02, 0.08)
+            : randomFloat(0.01, 0.06);
+
+          return {
+            ...candidate,
+            votes: candidate.votes + voteIncrement,
+            progress: Math.min(98, Number((candidate.progress + progressIncrement).toFixed(2))),
+          };
+        }),
+      );
+
+      setLiveStats((prev) => {
+        const nuevasActas = randomInt(6, 18);
+        const nuevasValidadas = randomInt(4, nuevasActas);
+        const nuevasObservadas = randomInt(0, 2);
+        const nuevasPendientes = Math.max(0, nuevasActas - nuevasValidadas - nuevasObservadas);
+
+        return {
+          ...prev,
+          actasValidadas: prev.actasValidadas + nuevasValidadas,
+          actasObservadas: prev.actasObservadas + nuevasObservadas,
+          actasPendientes: prev.actasPendientes + nuevasPendientes,
+          mesasRegistradas: prev.mesasRegistradas + nuevasActas,
+          mesasPendientes: Math.max(0, prev.mesasPendientes - nuevasActas),
+          blancoNulo: prev.blancoNulo + randomInt(5, 18),
+          activePersoneros: prev.activePersoneros + randomInt(0, 1),
+        };
+      });
+
+      setLiveTerritorialData((prev) =>
+        prev.map((item) => {
+          const fpIncrement = randomFloat(0.02, 0.12);
+          const ppIncrement = randomFloat(0.01, 0.07);
+
+          return {
+            ...item,
+            fuerzaPopular: Math.min(85, Number((item.fuerzaPopular + fpIncrement).toFixed(1))),
+            partidoDelPueblo: Math.min(75, Number((item.partidoDelPueblo + ppIncrement).toFixed(1))),
+          };
+        }),
+      );
+
+      setLiveDepartmentVotes((prev) =>
+        prev.map((item) => ({
+          ...item,
+          votos: item.votos + randomInt(180, 850),
+        })),
+      );
+
+      setLiveTimeline((prev) => {
+        const next = [...prev];
+        const lastIndex = next.length - 1;
+
+        next[lastIndex] = {
+          ...next[lastIndex],
+          votos: next[lastIndex].votos + randomInt(1500, 4200),
+        };
+
+        if (next.length >= 2) {
+          const previousIndex = next.length - 2;
+
+          next[previousIndex] = {
+            ...next[previousIndex],
+            votos: next[previousIndex].votos + randomInt(400, 1200),
+          };
+        }
+
+        return next;
+      });
+
+      setLiveActas((prev) => {
+        const newRow = createLiveActaRow();
+
+        return [newRow, ...prev]
+          .map((row, index) => ({
+            ...row,
+            horaRegistro: index === 0 ? 'Hace 0 min' : updateRelativeTime(index),
+          }))
+          .slice(0, 8);
+      });
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
   const filteredActas = useMemo(() => {
     return actasMock.filter((a) => {
       if (localFiltros.departamento && a.departamento !== localFiltros.departamento) return false;
@@ -144,6 +409,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
         const hasParty = a.votosPorPartido.some(
           (vp) => vp.partidoId === localFiltros.partidoPolitico,
         );
+
         if (!hasParty) return false;
       }
 
@@ -185,19 +451,24 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
     [votosPorPartido, totalGeneral],
   );
 
-  const activePersoneros = filteredPersoneros.filter((p) => p.estado === 'activo').length;
-
-  const avance = filteredMesas.length > 0
-    ? Math.min(100, Math.round((filteredActas.length / filteredMesas.length) * 100))
+  const totalMesas = liveStats.mesasRegistradas + liveStats.mesasPendientes;
+  const avance = totalMesas > 0
+    ? Math.min(100, Number(((liveStats.mesasRegistradas / totalMesas) * 100).toFixed(2)))
     : 0;
 
-  const actasValidadas = filteredActas.filter((a) => a.estadoValidacion === 'validada').length;
-  const actasObservadas = filteredActas.filter((a) => a.estadoValidacion === 'observada').length;
-  const actasPendientes = filteredActas.filter((a) => a.estadoValidacion === 'pendiente').length;
+  const firstCandidate = liveCandidates[0];
+  const secondCandidate = liveCandidates[1];
 
-  const totalMesas = filteredMesas.length || mesasMock.length;
-  const mesasRegistradas = filteredActas.length;
-  const mesasPendientes = Math.max(totalMesas - mesasRegistradas, 0);
+  const totalMainVotes = firstCandidate.votes + secondCandidate.votes;
+  const diferencia = Math.abs(firstCandidate.votes - secondCandidate.votes);
+
+  const margen = totalMainVotes > 0
+    ? ((diferencia / totalMainVotes) * 100).toFixed(2)
+    : '0.00';
+
+  const participacion = totalMesas > 0
+    ? Math.min(100, Math.round((liveStats.mesasRegistradas / totalMesas) * 100))
+    : 0;
 
   const availableProvincias = localFiltros.departamento
     ? PROVINCIAS_POR_DEPARTAMENTO[localFiltros.departamento] || []
@@ -209,38 +480,6 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
 
   const hasFilters = Object.values(localFiltros).some((v) => v !== '');
 
-  const topCandidates = useMemo(() => porcentajes.slice(0, 2), [porcentajes]);
-
-  const firstCandidate = topCandidates[0];
-  const secondCandidate = topCandidates[1];
-
-  const diferencia = firstCandidate && secondCandidate
-    ? Math.abs(firstCandidate.votos - secondCandidate.votos)
-    : 0;
-
-  const margen = totalGeneral > 0
-    ? ((diferencia / totalGeneral) * 100).toFixed(1)
-    : '0.0';
-
-  const participacion = totalMesas > 0
-    ? Math.round((filteredActas.length / totalMesas) * 100)
-    : 0;
-
-  const barData = useMemo(() => {
-    return DEPARTAMENTOS.map((depto) => {
-      const actasDepto = filteredActas.filter((a) => a.departamento === depto);
-
-      if (actasDepto.length === 0) return null;
-
-      const { totalGeneral: tg } = calcularVotosTotales(actasDepto);
-
-      return {
-        departamento: depto,
-        votos: tg,
-      };
-    }).filter(Boolean) as { departamento: string; votos: number }[];
-  }, [filteredActas]);
-
   const barConfig = useMemo(() => ({
     votos: {
       label: 'Votos',
@@ -248,50 +487,14 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
     },
   }), []);
 
-  const departamentosRanking = useMemo(() => {
-    const items = DEPARTAMENTOS.map((depto) => {
-      const actasDepto = filteredActas.filter((a) => a.departamento === depto);
-
-      if (actasDepto.length === 0) return null;
-
-      const { votosPorPartido: votosDepto, totalGeneral: totalDepto } = calcularVotosTotales(actasDepto);
-      const porcentajesDepto = calcularPorcentajes(votosDepto, totalDepto);
-      const ganador = porcentajesDepto[0];
-
-      return {
-        departamento: depto,
-        porcentaje: ganador?.porcentaje || 0,
-        ganador: ganador?.siglas || 'S/D',
-        color: ganador?.color || PRIMARY,
-      };
-    }).filter(Boolean) as {
-      departamento: string;
-      porcentaje: number;
-      ganador: string;
-      color: string;
-    }[];
-
-    return items.slice(0, 5);
-  }, [filteredActas]);
-
-  const timelineChartData = useMemo(() => {
-    const hourMap: Record<string, number> = {};
-
-    timelineMock.forEach((entry) => {
-      const hour = `${entry.hora.split(':')[0]}:00`;
-      hourMap[hour] = (hourMap[hour] || 0) + entry.totalVotos;
+  const lastUpdateText = useMemo(() => {
+    return lastUpdate.toLocaleTimeString('es-PE', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
     });
-
-    return Object.entries(hourMap)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([hora, votos]) => ({ hora, votos }));
-  }, []);
-
-  const tableData = useMemo(() => {
-    return [...filteredActas]
-      .sort((a, b) => `${b.fechaRegistro}${b.horaRegistro}`.localeCompare(`${a.fechaRegistro}${a.horaRegistro}`))
-      .slice(0, 10);
-  }, [filteredActas]);
+  }, [lastUpdate]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -328,22 +531,18 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
     }
   };
 
-  const getTimeAgo = (hora: string) => {
-    const now = new Date();
-    const [h, m] = hora.split(':').map(Number);
-    const minutes = Math.max(1, (now.getHours() - h) * 60 + (now.getMinutes() - m));
-
-    if (minutes < 60) return `Hace ${minutes} min`;
-
-    return `Hace ${Math.floor(minutes / 60)}h ${minutes % 60}m`;
-  };
-
   const formatNumber = (value: number) => {
     return value.toLocaleString('es-PE');
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#FFF7ED] px-4 py-4 text-[#24130A] sm:px-6 lg:px-8">
+    <div
+      className="min-h-screen w-full bg-[#FFF7ED] px-4 py-4 text-[#24130A] sm:px-6 lg:px-8"
+      style={{
+        fontFamily:
+          'Inter, Manrope, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+      }}
+    >
       <div className="mx-auto w-full max-w-[1480px] space-y-5">
         <motion.div
           initial="hidden"
@@ -362,11 +561,11 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-orange-700 shadow-sm">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
               <Radio className="h-3.5 w-3.5" />
               En línea
               <span className="hidden text-[10px] font-semibold normal-case tracking-normal text-orange-900/45 sm:inline">
-                Actualizado hace 2 min
+                Actualizado: {lastUpdateText}
               </span>
             </div>
 
@@ -389,7 +588,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
               initial={{ opacity: 0, height: 0, y: -8 }}
               animate={{ opacity: 1, height: 'auto', y: 0 }}
               exit={{ opacity: 0, height: 0, y: -8 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
               <Card className="rounded-2xl border border-orange-200 bg-white shadow-sm">
                 <CardContent className="p-4">
@@ -527,14 +726,14 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                         Avance general
                       </div>
 
-                      <div className="rounded-full bg-white/18 px-3 py-1 text-[10px] font-bold text-white">
+                      <div className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold text-white">
                         {formatNumber(totalMesas)} mesas
                       </div>
                     </div>
 
                     <div className="mt-3 flex items-end gap-3">
                       <div className="text-5xl font-black leading-none tracking-tight text-white">
-                        {avance}%
+                        {avance.toFixed(2)}%
                       </div>
                       <TrendingUp className="mb-2 h-5 w-5 text-orange-100" />
                     </div>
@@ -545,16 +744,16 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
 
                     <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/25">
                       <motion.div
-                        initial={{ width: 0 }}
+                        initial={false}
                         animate={{ width: `${avance}%` }}
-                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                         className="h-full rounded-full bg-white"
                       />
                     </div>
 
                     <div className="mt-3 flex items-center justify-between text-[11px] font-bold text-white/75">
-                      <span>{formatNumber(mesasRegistradas)} procesadas</span>
-                      <span>{formatNumber(mesasPendientes)} pendientes</span>
+                      <span>{formatNumber(liveStats.mesasRegistradas)} procesadas</span>
+                      <span>{formatNumber(liveStats.mesasPendientes)} pendientes</span>
                     </div>
 
                     <div className="absolute -bottom-10 -right-8 h-32 w-32 rounded-full bg-white/10" />
@@ -578,11 +777,13 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                     <div className="mt-5 text-xs font-bold uppercase tracking-[0.12em] text-orange-900/50">
                       Actas validadas
                     </div>
+
                     <div className="mt-2 text-3xl font-black text-[#24130A]">
-                      {formatNumber(actasValidadas)}
+                      {formatNumber(liveStats.actasValidadas)}
                     </div>
+
                     <div className="mt-3 flex items-center gap-1 text-xs font-bold text-emerald-600">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
                       Sincronizadas
                     </div>
                   </CardContent>
@@ -604,9 +805,11 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                     <div className="mt-5 text-xs font-bold uppercase tracking-[0.12em] text-orange-900/50">
                       Actas observadas
                     </div>
+
                     <div className="mt-2 text-3xl font-black text-[#24130A]">
-                      {formatNumber(actasObservadas)}
+                      {formatNumber(liveStats.actasObservadas)}
                     </div>
+
                     <div className="mt-3 flex items-center gap-1 text-xs font-bold text-red-600">
                       <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
                       Pendientes de control
@@ -617,70 +820,107 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
             </div>
 
             <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
-              <Card className="rounded-2xl border border-orange-100 bg-white shadow-sm">
+              <Card className="rounded-3xl border border-orange-100 bg-white shadow-sm">
                 <CardContent className="p-5 sm:p-6">
                   <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h2 className="text-lg font-black text-[#24130A]">
+                      <h2 className="text-xl font-black tracking-tight text-[#24130A]">
                         Resultados principales
                       </h2>
                       <p className="mt-1 text-xs font-medium text-orange-900/50">
-                        Comparativo de los dos partidos con mayor votación acumulada.
+                        Simulación de incremento de votos cada 5 segundos.
                       </p>
                     </div>
 
                     <Badge className="w-fit rounded-full bg-orange-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-orange-700 hover:bg-orange-50">
-                      Resumen oficial
+                      Resumen en vivo
                     </Badge>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-                    {[firstCandidate, secondCandidate].filter(Boolean).map((candidate, index) => {
-                      const maxVotos = Math.max(firstCandidate?.votos || 1, secondCandidate?.votos || 1);
-                      const progress = candidate ? (candidate.votos / maxVotos) * 100 : 0;
+                  <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                    {liveCandidates.map((candidate) => (
+                      <div
+                        key={candidate.id}
+                        className="relative overflow-hidden rounded-3xl border border-orange-100 bg-white p-4 shadow-sm"
+                      >
+                        <div
+                          className="absolute inset-x-0 top-0 h-1.5"
+                          style={{ backgroundColor: candidate.color }}
+                        />
 
-                      return (
-                        <div key={candidate?.id || index} className="space-y-4">
-                          <div className="flex items-center gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="relative shrink-0">
                             <div
-                              className="flex h-14 w-14 items-center justify-center rounded-2xl text-xs font-black text-white shadow-sm"
-                              style={{ backgroundColor: candidate?.color || PRIMARY }}
+                              className="h-[72px] w-[72px] overflow-hidden rounded-2xl border-4 bg-white shadow-sm"
+                              style={{ borderColor: candidate.color }}
                             >
-                              {candidate?.siglas?.slice(0, 3) || 'S/D'}
+                              <img
+                                src={candidate.photo}
+                                alt={candidate.displayName}
+                                className="h-full w-full object-cover"
+                              />
                             </div>
 
-                            <div className="min-w-0">
-                              <div className="truncate text-lg font-black text-[#24130A]">
-                                {candidate?.nombre || 'Sin datos'}
-                              </div>
-                              <div className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-900/35">
-                                {candidate?.siglas || 'Partido'}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex items-end justify-between gap-3">
-                            <div className="text-4xl font-black tracking-tight text-[#24130A]">
-                              {formatNumber(candidate?.votos || 0)}
-                            </div>
-
-                            <div className="pb-1 text-xs font-black text-orange-900/45">
-                              Votos
+                            <div className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white shadow-md">
+                              <img
+                                src={candidate.logo}
+                                alt={candidate.partyName}
+                                className="h-full w-full object-contain p-0.5"
+                              />
                             </div>
                           </div>
 
-                          <div className="h-3 overflow-hidden rounded-full bg-orange-100">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${progress}%` }}
-                              transition={{ duration: 0.8, ease: 'easeOut' }}
-                              className="h-full rounded-full"
-                              style={{ backgroundColor: candidate?.color || PRIMARY }}
-                            />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-xl font-black leading-tight text-[#24130A]">
+                              {candidate.displayName}
+                            </div>
+
+                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                              <span
+                                className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]"
+                                style={{
+                                  backgroundColor: candidate.accent,
+                                  color: candidate.color,
+                                }}
+                              >
+                                {candidate.partyName}
+                              </span>
+
+                              <span className="text-[10px] font-bold text-orange-900/40">
+                                Barra al {candidate.progress.toFixed(1)}%
+                              </span>
+                            </div>
                           </div>
                         </div>
-                      );
-                    })}
+
+                        <div className="mt-6 flex items-end justify-between gap-3">
+                          <motion.div
+                            key={candidate.votes}
+                            initial={{ opacity: 0.5, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.25 }}
+                            className="text-4xl font-black tracking-tight"
+                            style={{ color: candidate.color }}
+                          >
+                            {formatNumber(candidate.votes)}
+                          </motion.div>
+
+                          <div className="pb-1 text-xs font-black uppercase tracking-[0.12em] text-orange-900/45">
+                            Votos
+                          </div>
+                        </div>
+
+                        <div className="mt-4 h-3 overflow-hidden rounded-full bg-orange-100">
+                          <motion.div
+                            initial={false}
+                            animate={{ width: `${candidate.progress}%` }}
+                            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: candidate.color }}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   <div className="my-7 border-t border-orange-100" />
@@ -703,7 +943,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                         Blanco / nulo
                       </div>
                       <div className="mt-1 text-2xl font-black text-[#24130A]">
-                        {formatNumber(totalBlanco + totalNulos)}
+                        {formatNumber(liveStats.blancoNulo + totalBlanco + totalNulos)}
                       </div>
                       <div className="text-[10px] font-bold text-orange-900/40">
                         Votos especiales
@@ -745,7 +985,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                         Registradas
                       </div>
                       <div className="text-lg font-black text-[#24130A]">
-                        {formatNumber(mesasRegistradas)}
+                        {formatNumber(liveStats.mesasRegistradas)}
                       </div>
                     </div>
 
@@ -755,7 +995,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                         Pendientes
                       </div>
                       <div className="text-lg font-black text-[#24130A]">
-                        {formatNumber(mesasPendientes)}
+                        {formatNumber(liveStats.mesasPendientes)}
                       </div>
                     </div>
 
@@ -765,7 +1005,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                         Actas en proceso
                       </div>
                       <div className="text-lg font-black text-[#24130A]">
-                        {formatNumber(actasPendientes)}
+                        {formatNumber(liveStats.actasPendientes)}
                       </div>
                     </div>
                   </div>
@@ -777,7 +1017,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       Personeros activos
                     </span>
                     <span className="font-black text-orange-700">
-                      {formatNumber(activePersoneros)}
+                      {formatNumber(liveStats.activePersoneros)}
                     </span>
                   </div>
                 </CardContent>
@@ -793,41 +1033,113 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                         Distribución territorial
                       </h2>
                       <p className="mt-1 text-xs font-medium text-orange-900/50">
-                        Departamentos con mayor concentración de votos.
+                        Comparativo territorial por partido.
                       </p>
                     </div>
                     <MapPin className="h-5 w-5 text-orange-600" />
                   </div>
 
-                  <div className="space-y-4">
-                    {departamentosRanking.length > 0 ? (
-                      departamentosRanking.map((item, index) => (
-                        <div key={item.departamento}>
-                          <div className="mb-1 flex items-center justify-between">
-                            <span className="text-xs font-black text-[#24130A]">
-                              {item.departamento}
-                            </span>
-                            <span className="text-xs font-black text-orange-900/50">
-                              {item.porcentaje}% {item.ganador}
-                            </span>
-                          </div>
-
-                          <div className="h-2 overflow-hidden rounded-full bg-orange-100">
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${Math.min(item.porcentaje, 100)}%` }}
-                              transition={{ duration: 0.7, delay: index * 0.08 }}
-                              className="h-full rounded-full"
-                              style={{ backgroundColor: item.color || PRIMARY }}
+                  <div className="mb-5 grid grid-cols-2 gap-3">
+                    {liveCandidates.map((candidate) => (
+                      <div
+                        key={candidate.id}
+                        className="rounded-2xl border border-orange-100 bg-orange-50/50 p-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
+                            <img
+                              src={candidate.logo}
+                              alt={candidate.partyName}
+                              className="h-full w-full object-contain p-1"
                             />
                           </div>
+
+                          <div className="min-w-0">
+                            <div className="truncate text-[11px] font-black text-[#24130A]">
+                              {candidate.partyName}
+                            </div>
+                            <div
+                              className="text-[10px] font-black uppercase"
+                              style={{ color: candidate.color }}
+                            >
+                              {candidate.partyShortName}
+                            </div>
+                          </div>
                         </div>
-                      ))
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-orange-200 p-4 text-center text-xs font-semibold text-orange-900/45">
-                        No hay datos para mostrar.
                       </div>
-                    )}
+                    ))}
+                  </div>
+
+                  <div className="space-y-5">
+                    {liveTerritorialData.map((item, index) => (
+                      <div key={item.departamento}>
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-xs font-black text-[#24130A]">
+                            {item.departamento}
+                          </span>
+
+                          <span className="text-xs font-black text-orange-700">
+                            Fuerza Popular
+                          </span>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div>
+                            <div className="mb-1 flex items-center justify-between text-[10px] font-bold">
+                              <div className="flex items-center gap-1.5 text-orange-700">
+                                <img
+                                  src="/images/k.png"
+                                  alt="Fuerza Popular"
+                                  className="h-4 w-4 rounded-full object-contain"
+                                />
+                                <span>Fuerza Popular</span>
+                              </div>
+                              <span className="text-orange-700">{item.fuerzaPopular.toFixed(1)}%</span>
+                            </div>
+
+                            <div className="h-2 overflow-hidden rounded-full bg-orange-100">
+                              <motion.div
+                                initial={false}
+                                animate={{ width: `${item.fuerzaPopular}%` }}
+                                transition={{
+                                  duration: 0.7,
+                                  delay: index * 0.08,
+                                  ease: [0.16, 1, 0.3, 1],
+                                }}
+                                className="h-full rounded-full bg-orange-500"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="mb-1 flex items-center justify-between text-[10px] font-bold">
+                              <div className="flex items-center gap-1.5 text-emerald-700">
+                                <img
+                                  src="/images/jp.jpg"
+                                  alt="Partido del Pueblo"
+                                  className="h-4 w-4 rounded-full object-contain"
+                                />
+                                <span>Partido del Pueblo</span>
+                              </div>
+                              <span className="text-emerald-700">{item.partidoDelPueblo.toFixed(1)}%</span>
+                            </div>
+
+                            <div className="h-2 overflow-hidden rounded-full bg-emerald-100">
+                              <motion.div
+                                initial={false}
+                                animate={{ width: `${item.partidoDelPueblo}%` }}
+                                transition={{
+                                  duration: 0.7,
+                                  delay: index * 0.08 + 0.1,
+                                  ease: [0.16, 1, 0.3, 1],
+                                }}
+                                className="h-full rounded-full bg-emerald-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   <Button
@@ -858,7 +1170,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
 
                   <div className="h-[170px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={timelineChartData}>
+                      <BarChart data={liveTimeline}>
                         <XAxis
                           dataKey="hora"
                           axisLine={false}
@@ -875,13 +1187,13 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                           }}
                         />
                         <Bar dataKey="votos" radius={[6, 6, 0, 0]}>
-                          {timelineChartData.map((_, index) => (
+                          {liveTimeline.map((_, index) => (
                             <Cell
                               key={`cell-${index}`}
                               fill={
-                                index === timelineChartData.length - 1
+                                index === liveTimeline.length - 1
                                   ? PRIMARY
-                                  : index >= timelineChartData.length - 2
+                                  : index >= liveTimeline.length - 2
                                     ? PRIMARY_LIGHT
                                     : '#FED7AA'
                               }
@@ -904,7 +1216,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
             variants={sectionVariants}
             className="xl:col-span-7"
           >
-            <Card className="rounded-2xl border border-orange-100 bg-white shadow-sm">
+            <Card className="h-full rounded-2xl border border-orange-100 bg-white shadow-sm">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50">
@@ -915,7 +1227,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       Resultados por partido
                     </CardTitle>
                     <CardDescription className="text-xs text-orange-900/50">
-                      Comparación general de votos acumulados.
+                      Simulación de votos acumulados por agrupación.
                     </CardDescription>
                   </div>
                 </div>
@@ -923,49 +1235,60 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
 
               <CardContent>
                 <div className="space-y-3">
-                  {porcentajes.map((partido, idx) => {
-                    const maxVotos = porcentajes[0]?.votos || 1;
-                    const barWidth = (partido.votos / maxVotos) * 100;
+                  {liveCandidates.map((partido, idx) => {
+                    const maxVotos = Math.max(...liveCandidates.map((p) => p.votes));
+                    const barWidth = maxVotos > 0 ? (partido.votes / maxVotos) * 100 : 0;
 
                     return (
                       <motion.div
                         key={partido.id}
                         initial={{ opacity: 0, x: -18 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: idx * 0.05, duration: 0.35 }}
+                        transition={{
+                          delay: idx * 0.05,
+                          duration: 0.35,
+                          ease: [0.16, 1, 0.3, 1],
+                        }}
                         className="rounded-xl border border-orange-100 p-3 hover:bg-orange-50/40"
                       >
                         <div className="flex items-center gap-3">
-                          <div
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black text-white"
-                            style={{ backgroundColor: partido.color }}
-                          >
-                            {partido.siglas.slice(0, 2)}
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
+                            <img
+                              src={partido.logo}
+                              alt={partido.partyName}
+                              className="h-full w-full object-contain p-1"
+                            />
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex items-center justify-between">
+                            <div className="mb-1 flex items-center justify-between gap-3">
                               <span className="truncate text-sm font-black text-[#24130A]">
-                                {partido.nombre}
+                                {partido.partyName}
                               </span>
 
-                              <div className="ml-2 flex shrink-0 items-center gap-2">
+                              <div className="flex shrink-0 items-center gap-2">
                                 <span className="text-sm font-black text-[#24130A]">
-                                  {formatNumber(partido.votos)}
+                                  {formatNumber(partido.votes)}
                                 </span>
-                                <span className="rounded-lg bg-orange-50 px-2 py-0.5 text-xs font-black text-orange-700">
-                                  {partido.porcentaje}%
+                                <span
+                                  className="rounded-lg px-2 py-0.5 text-xs font-black"
+                                  style={{
+                                    backgroundColor: partido.accent,
+                                    color: partido.color,
+                                  }}
+                                >
+                                  {partido.progress.toFixed(1)}%
                                 </span>
                               </div>
                             </div>
 
                             <div className="h-2 overflow-hidden rounded-full bg-orange-100">
                               <motion.div
-                                initial={{ width: 0 }}
+                                initial={false}
                                 animate={{ width: `${barWidth}%` }}
                                 transition={{
                                   duration: 0.8,
-                                  ease: 'easeOut',
+                                  ease: [0.16, 1, 0.3, 1],
                                   delay: 0.2 + idx * 0.05,
                                 }}
                                 className="h-full rounded-full"
@@ -988,7 +1311,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
             variants={sectionVariants}
             className="xl:col-span-5"
           >
-            <Card className="rounded-2xl border border-orange-100 bg-white shadow-sm">
+            <Card className="h-full rounded-2xl border border-orange-100 bg-white shadow-sm">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50">
@@ -1007,14 +1330,14 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
 
               <CardContent>
                 <ChartContainer config={barConfig} className="aspect-[4/3] max-h-[280px]">
-                  <BarChart data={barData} layout="vertical" margin={{ left: 20 }}>
+                  <BarChart data={liveDepartmentVotes} layout="vertical" margin={{ left: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#FFEDD5" />
                     <XAxis type="number" tick={{ fontSize: 11, fill: '#9A3412' }} />
                     <YAxis
                       dataKey="departamento"
                       type="category"
                       tick={{ fontSize: 11, fill: '#9A3412' }}
-                      width={80}
+                      width={85}
                     />
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="votos" fill={PRIMARY} radius={[0, 8, 8, 0]} />
@@ -1034,7 +1357,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                     Últimas actas recibidas
                   </h2>
                   <p className="mt-1 text-xs font-medium text-orange-900/50">
-                    Registro operativo de actas procesadas recientemente.
+                    Registro operativo simulado en tiempo real.
                   </p>
                 </div>
 
@@ -1055,83 +1378,70 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
               </div>
 
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="min-w-[820px]">
                   <TableHeader>
                     <TableRow className="border-orange-100 bg-orange-50 hover:bg-orange-50">
-                      <TableHead className="h-11 text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
+                      <TableHead className="h-11 w-[170px] whitespace-nowrap text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
                         ID acta
                       </TableHead>
-                      <TableHead className="h-11 text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
+                      <TableHead className="h-11 min-w-[260px] whitespace-nowrap text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
                         Ubicación
                       </TableHead>
-                      <TableHead className="h-11 text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
+                      <TableHead className="h-11 w-[160px] whitespace-nowrap text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
                         Estado
                       </TableHead>
-                      <TableHead className="h-11 text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
+                      <TableHead className="h-11 w-[120px] whitespace-nowrap text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
                         Mesa
                       </TableHead>
-                      <TableHead className="h-11 text-right text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
+                      <TableHead className="h-11 w-[150px] whitespace-nowrap text-right text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
                         Hora registro
                       </TableHead>
                     </TableRow>
                   </TableHeader>
 
                   <TableBody>
-                    {tableData.length > 0 ? (
-                      tableData.map((acta, index) => (
-                        <TableRow
-                          key={acta.id}
-                          className="border-orange-100 hover:bg-orange-50/50"
-                        >
-                          <TableCell className="py-4 text-sm font-black text-[#24130A]">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`h-1.5 w-1.5 rounded-full ${
-                                  acta.estadoValidacion === 'validada'
-                                    ? 'bg-emerald-400'
-                                    : acta.estadoValidacion === 'observada'
-                                      ? 'bg-red-400'
-                                      : 'bg-orange-400'
-                                }`}
-                              />
-                              #ACT-{String(index + 92840).padStart(5, '0')}
-                            </div>
-                          </TableCell>
-
-                          <TableCell className="py-4">
-                            <div className="text-sm font-black text-[#24130A]">
-                              {acta.departamento}, {acta.provincia}
-                            </div>
-                            <div className="mt-0.5 text-[10px] font-semibold text-orange-900/45">
-                              {acta.distrito}
-                            </div>
-                          </TableCell>
-
-                          <TableCell className="py-4">
-                            {getStatusBadge(acta.estadoValidacion)}
-                          </TableCell>
-
-                          <TableCell className="py-4 text-sm font-black text-[#24130A]">
-                            {acta.numeroMesa}
-                          </TableCell>
-
-                          <TableCell className="py-4 text-right text-sm font-black text-[#24130A]">
-                            {getTimeAgo(acta.horaRegistro)}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="py-10 text-center">
-                          <div className="flex flex-col items-center justify-center gap-2 text-orange-900/45">
-                            <FileText className="h-8 w-8 text-orange-200" />
-                            <span className="text-sm font-semibold">
-                              No se encontraron actas con los filtros aplicados.
-                            </span>
+                    {liveActas.map((acta) => (
+                      <TableRow
+                        key={acta.id}
+                        className="border-orange-100 hover:bg-orange-50/50"
+                      >
+                        <TableCell className="py-4 text-sm font-black text-[#24130A]">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                acta.estado === 'validada'
+                                  ? 'bg-emerald-400'
+                                  : acta.estado === 'observada'
+                                    ? 'bg-red-400'
+                                    : 'bg-orange-400'
+                              }`}
+                            />
+                            <span className="whitespace-nowrap">{acta.id}</span>
                           </div>
                         </TableCell>
+
+                        <TableCell className="py-4">
+                          <div className="text-sm font-black text-[#24130A]">
+                            {acta.ubicacion}
+                          </div>
+                          <div className="mt-0.5 text-[10px] font-semibold text-orange-900/45">
+                            {acta.centro}
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="py-4">
+                          {getStatusBadge(acta.estado)}
+                        </TableCell>
+
+                        <TableCell className="py-4 text-sm font-black text-[#24130A]">
+                          {acta.mesa}
+                        </TableCell>
+
+                        <TableCell className="py-4 text-right text-sm font-black text-[#24130A]">
+                          {acta.horaRegistro}
+                        </TableCell>
                       </TableRow>
-                    )}
+                    ))}
                   </TableBody>
                 </Table>
               </div>
@@ -1150,4 +1460,51 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
       </div>
     </div>
   );
+}
+
+function randomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomFloat(min: number, max: number) {
+  return Math.random() * (max - min) + min;
+}
+
+function createLiveActaRow(): LiveActaRow {
+  const locations = [
+    { ubicacion: 'Lima, San Isidro', centro: 'I.E. Alfonso Ugarte' },
+    { ubicacion: 'Lima, Miraflores', centro: 'Colegio San Agustín' },
+    { ubicacion: 'Arequipa, Cercado', centro: 'I.E. Independencia' },
+    { ubicacion: 'Cusco, Wanchaq', centro: 'U.N. San Antonio Abad' },
+    { ubicacion: 'Piura, Castilla', centro: 'I.E. Miguel Cortés' },
+    { ubicacion: 'La Libertad, Trujillo', centro: 'Colegio Modelo' },
+  ];
+
+  const estados: LiveActaRow['estado'][] = ['validada', 'validada', 'validada', 'pendiente', 'observada'];
+  const selectedLocation = locations[randomInt(0, locations.length - 1)];
+  const selectedStatus = estados[randomInt(0, estados.length - 1)];
+  const actaNumber = randomInt(92841, 99999);
+  const letter = String.fromCharCode(65 + randomInt(0, 25));
+
+  return {
+    id: `#ACT-${actaNumber}-${letter}`,
+    ubicacion: selectedLocation.ubicacion,
+    centro: selectedLocation.centro,
+    estado: selectedStatus,
+    mesa: String(randomInt(10000, 99999)).padStart(6, '0'),
+    horaRegistro: 'Hace 0 min',
+  };
+}
+
+function updateRelativeTime(index: number) {
+  const minutes = Math.max(1, index * randomInt(2, 4));
+
+  if (minutes < 60) {
+    return `Hace ${minutes} min`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+
+  return `Hace ${hours}h ${rest}m`;
 }
