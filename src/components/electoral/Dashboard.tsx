@@ -122,12 +122,30 @@ interface LiveActaRow {
   horaRegistro: string;
 }
 
+interface RollingNumberProps {
+  value: string | number;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
 const PRIMARY = '#F97316';
 const PRIMARY_DARK = '#C2410C';
 const PRIMARY_LIGHT = '#FDBA74';
 const GREEN = '#16A34A';
 const GREEN_DARK = '#15803D';
 const GREEN_LIGHT = '#DCFCE7';
+
+
+const numberClass = 'whitespace-nowrap font-black leading-none tracking-[-0.02em] tabular-nums';
+
+const selectTriggerClass =
+  'w-full rounded-xl border-orange-200 bg-white text-xs text-[#24130A] shadow-sm focus:border-orange-500 focus:ring-orange-500/20 data-[placeholder]:text-orange-900/45 disabled:cursor-not-allowed disabled:bg-orange-50 disabled:text-orange-900/30';
+
+const selectContentClass =
+  'border-orange-200 bg-white text-[#24130A] shadow-xl';
+
+const selectItemClass =
+  'cursor-pointer text-xs font-semibold focus:bg-orange-50 focus:text-orange-700';
 
 const MAIN_CANDIDATES: CandidateDashboard[] = [
   {
@@ -146,7 +164,7 @@ const MAIN_CANDIDATES: CandidateDashboard[] = [
   {
     id: 'roberto',
     displayName: 'Roberto Sánchez',
-    partyName: 'Partido del Pueblo',
+    partyName: 'Juntos por el Perú',
     partyShortName: 'JP',
     votes: 8790500,
     photo: '/images/roberto.jpeg',
@@ -597,12 +615,12 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       value={localFiltros.departamento}
                       onValueChange={(v) => updateFiltro('departamento', v)}
                     >
-                      <SelectTrigger className="w-full rounded-xl border-orange-200 bg-white text-xs">
+                      <SelectTrigger className={selectTriggerClass}>
                         <SelectValue placeholder="Departamento" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className={selectContentClass}>
                         {DEPARTAMENTOS.map((d) => (
-                          <SelectItem key={d} value={d}>
+                          <SelectItem key={d} value={d} className={selectItemClass}>
                             {d}
                           </SelectItem>
                         ))}
@@ -614,12 +632,12 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       onValueChange={(v) => updateFiltro('provincia', v)}
                       disabled={!localFiltros.departamento}
                     >
-                      <SelectTrigger className="w-full rounded-xl border-orange-200 bg-white text-xs">
+                      <SelectTrigger className={selectTriggerClass}>
                         <SelectValue placeholder="Provincia" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className={selectContentClass}>
                         {availableProvincias.map((p) => (
-                          <SelectItem key={p} value={p}>
+                          <SelectItem key={p} value={p} className={selectItemClass}>
                             {p}
                           </SelectItem>
                         ))}
@@ -631,12 +649,12 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       onValueChange={(v) => updateFiltro('distrito', v)}
                       disabled={!localFiltros.provincia}
                     >
-                      <SelectTrigger className="w-full rounded-xl border-orange-200 bg-white text-xs">
+                      <SelectTrigger className={selectTriggerClass}>
                         <SelectValue placeholder="Distrito" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className={selectContentClass}>
                         {availableDistritos.map((d) => (
-                          <SelectItem key={d} value={d}>
+                          <SelectItem key={d} value={d} className={selectItemClass}>
                             {d}
                           </SelectItem>
                         ))}
@@ -647,12 +665,12 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       value={localFiltros.partidoPolitico}
                       onValueChange={(v) => updateFiltro('partidoPolitico', v)}
                     >
-                      <SelectTrigger className="w-full rounded-xl border-orange-200 bg-white text-xs">
+                      <SelectTrigger className={selectTriggerClass}>
                         <SelectValue placeholder="Partido político" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className={selectContentClass}>
                         {partidosMock.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
+                          <SelectItem key={p.id} value={p.id} className={selectItemClass}>
                             <div className="flex items-center gap-2">
                               <span
                                 className="h-2.5 w-2.5 shrink-0 rounded-full"
@@ -710,7 +728,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
         </AnimatePresence>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-          <div className="space-y-5 xl:col-span-8">
+          <div className="space-y-5 xl:col-span-7">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
               <motion.div
                 custom={0}
@@ -727,14 +745,15 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       </div>
 
                       <div className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold text-white">
-                        {formatNumber(totalMesas)} mesas
+                        <RollingNumber value={formatNumber(totalMesas)} /> mesas
                       </div>
                     </div>
 
                     <div className="mt-3 flex items-end gap-3">
-                      <div className="text-5xl font-black leading-none tracking-tight text-white">
-                        {avance.toFixed(2)}%
-                      </div>
+                      <RollingNumber
+                        value={`${avance.toFixed(2)}%`}
+                        className="text-5xl font-black leading-none tracking-tight text-white"
+                      />
                       <TrendingUp className="mb-2 h-5 w-5 text-orange-100" />
                     </div>
 
@@ -752,8 +771,12 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                     </div>
 
                     <div className="mt-3 flex items-center justify-between text-[11px] font-bold text-white/75">
-                      <span>{formatNumber(liveStats.mesasRegistradas)} procesadas</span>
-                      <span>{formatNumber(liveStats.mesasPendientes)} pendientes</span>
+                      <span>
+                        <RollingNumber value={formatNumber(liveStats.mesasRegistradas)} /> procesadas
+                      </span>
+                      <span>
+                        <RollingNumber value={formatNumber(liveStats.mesasPendientes)} /> pendientes
+                      </span>
                     </div>
 
                     <div className="absolute -bottom-10 -right-8 h-32 w-32 rounded-full bg-white/10" />
@@ -763,7 +786,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
               </motion.div>
 
               <motion.div custom={1} initial="hidden" animate="visible" variants={cardVariants}>
-                <Card className="h-full rounded-2xl border border-orange-100 bg-white shadow-sm">
+                <Card className="h-full overflow-visible rounded-2xl border border-orange-100 bg-white shadow-sm">
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
@@ -778,9 +801,10 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       Actas validadas
                     </div>
 
-                    <div className="mt-2 text-3xl font-black text-[#24130A]">
-                      {formatNumber(liveStats.actasValidadas)}
-                    </div>
+                    <RollingNumber
+                      value={formatNumber(liveStats.actasValidadas)}
+                      className={`mt-2 block text-[2rem] ${numberClass} text-[#24130A] sm:text-3xl`}
+                    />
 
                     <div className="mt-3 flex items-center gap-1 text-xs font-bold text-emerald-600">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
@@ -791,7 +815,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
               </motion.div>
 
               <motion.div custom={2} initial="hidden" animate="visible" variants={cardVariants}>
-                <Card className="h-full rounded-2xl border border-orange-100 bg-white shadow-sm">
+                <Card className="h-full overflow-visible rounded-2xl border border-orange-100 bg-white shadow-sm">
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
@@ -806,9 +830,10 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       Actas observadas
                     </div>
 
-                    <div className="mt-2 text-3xl font-black text-[#24130A]">
-                      {formatNumber(liveStats.actasObservadas)}
-                    </div>
+                    <RollingNumber
+                      value={formatNumber(liveStats.actasObservadas)}
+                      className={`mt-2 block text-[2rem] ${numberClass} text-[#24130A] sm:text-3xl`}
+                    />
 
                     <div className="mt-3 flex items-center gap-1 text-xs font-bold text-red-600">
                       <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
@@ -887,23 +912,18 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                               </span>
 
                               <span className="text-[10px] font-bold text-orange-900/40">
-                                Barra al {candidate.progress.toFixed(1)}%
+                                Barra al <RollingNumber value={`${candidate.progress.toFixed(1)}%`} />
                               </span>
                             </div>
                           </div>
                         </div>
 
                         <div className="mt-6 flex items-end justify-between gap-3">
-                          <motion.div
-                            key={candidate.votes}
-                            initial={{ opacity: 0.5, y: -4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.25 }}
+                          <RollingNumber
+                            value={formatNumber(candidate.votes)}
                             className="text-4xl font-black tracking-tight"
                             style={{ color: candidate.color }}
-                          >
-                            {formatNumber(candidate.votes)}
-                          </motion.div>
+                          />
 
                           <div className="pb-1 text-xs font-black uppercase tracking-[0.12em] text-orange-900/45">
                             Votos
@@ -930,11 +950,12 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       <div className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-800/70">
                         Diferencia
                       </div>
-                      <div className="mt-1 text-2xl font-black text-[#24130A]">
-                        {formatNumber(diferencia)}
-                      </div>
+                      <RollingNumber
+                        value={formatNumber(diferencia)}
+                        className="mt-1 block text-2xl font-black text-[#24130A]"
+                      />
                       <div className="text-[10px] font-bold text-orange-900/40">
-                        {margen}% de margen
+                        <RollingNumber value={`${margen}%`} /> de margen
                       </div>
                     </div>
 
@@ -942,9 +963,10 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       <div className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-800/70">
                         Blanco / nulo
                       </div>
-                      <div className="mt-1 text-2xl font-black text-[#24130A]">
-                        {formatNumber(liveStats.blancoNulo + totalBlanco + totalNulos)}
-                      </div>
+                      <RollingNumber
+                        value={formatNumber(liveStats.blancoNulo + totalBlanco + totalNulos)}
+                        className="mt-1 block text-2xl font-black text-[#24130A]"
+                      />
                       <div className="text-[10px] font-bold text-orange-900/40">
                         Votos especiales
                       </div>
@@ -954,9 +976,10 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       <div className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-800/70">
                         Participación
                       </div>
-                      <div className="mt-1 text-2xl font-black text-[#24130A]">
-                        {participacion}%
-                      </div>
+                      <RollingNumber
+                        value={`${participacion}%`}
+                        className="mt-1 block text-2xl font-black text-[#24130A]"
+                      />
                       <div className="text-[10px] font-bold text-orange-900/40">
                         Sobre mesas procesadas
                       </div>
@@ -967,7 +990,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
             </motion.div>
           </div>
 
-          <div className="space-y-5 xl:col-span-4">
+          <div className="space-y-5 xl:col-span-5">
             <motion.div custom={3} initial="hidden" animate="visible" variants={cardVariants}>
               <Card className="rounded-2xl border border-orange-100 bg-white shadow-sm">
                 <CardContent className="p-5">
@@ -979,34 +1002,37 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                   </div>
 
                   <div className="mt-5 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm font-bold text-[#24130A]">
-                        <span className="h-2 w-2 rounded-full bg-orange-600" />
-                        Registradas
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+                      <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-[#24130A]">
+                        <span className="h-2 w-2 shrink-0 rounded-full bg-orange-600" />
+                        <span className="truncate">Registradas</span>
                       </div>
-                      <div className="text-lg font-black text-[#24130A]">
-                        {formatNumber(liveStats.mesasRegistradas)}
-                      </div>
+                      <RollingNumber
+                        value={formatNumber(liveStats.mesasRegistradas)}
+                        className={`shrink-0 text-lg ${numberClass} text-[#24130A]`}
+                      />
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm font-bold text-orange-900/45">
-                        <span className="h-2 w-2 rounded-full bg-orange-200" />
-                        Pendientes
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+                      <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-orange-900/55">
+                        <span className="h-2 w-2 shrink-0 rounded-full bg-orange-200" />
+                        <span className="truncate">Pendientes</span>
                       </div>
-                      <div className="text-lg font-black text-[#24130A]">
-                        {formatNumber(liveStats.mesasPendientes)}
-                      </div>
+                      <RollingNumber
+                        value={formatNumber(liveStats.mesasPendientes)}
+                        className={`shrink-0 text-lg ${numberClass} text-[#24130A]`}
+                      />
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-sm font-bold text-orange-900/45">
-                        <span className="h-2 w-2 rounded-full bg-orange-400" />
-                        Actas en proceso
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
+                      <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-orange-900/55">
+                        <span className="h-2 w-2 shrink-0 rounded-full bg-orange-400" />
+                        <span className="truncate">Actas en proceso</span>
                       </div>
-                      <div className="text-lg font-black text-[#24130A]">
-                        {formatNumber(liveStats.actasPendientes)}
-                      </div>
+                      <RollingNumber
+                        value={formatNumber(liveStats.actasPendientes)}
+                        className={`shrink-0 text-lg ${numberClass} text-[#24130A]`}
+                      />
                     </div>
                   </div>
 
@@ -1016,9 +1042,10 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                     <span className="text-orange-900/45">
                       Personeros activos
                     </span>
-                    <span className="font-black text-orange-700">
-                      {formatNumber(liveStats.activePersoneros)}
-                    </span>
+                    <RollingNumber
+                      value={formatNumber(liveStats.activePersoneros)}
+                      className={`shrink-0 ${numberClass} text-orange-700`}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -1094,7 +1121,9 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                                 />
                                 <span>Fuerza Popular</span>
                               </div>
-                              <span className="text-orange-700">{item.fuerzaPopular.toFixed(1)}%</span>
+                              <span className="text-orange-700">
+                                <RollingNumber value={`${item.fuerzaPopular.toFixed(1)}%`} />
+                              </span>
                             </div>
 
                             <div className="h-2 overflow-hidden rounded-full bg-orange-100">
@@ -1116,12 +1145,14 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                               <div className="flex items-center gap-1.5 text-emerald-700">
                                 <img
                                   src="/images/jp.jpg"
-                                  alt="Partido del Pueblo"
+                                  alt="Juntos por el Perú"
                                   className="h-4 w-4 rounded-full object-contain"
                                 />
-                                <span>Partido del Pueblo</span>
+                                <span>Juntos por el Perú</span>
                               </div>
-                              <span className="text-emerald-700">{item.partidoDelPueblo.toFixed(1)}%</span>
+                              <span className="text-emerald-700">
+                                <RollingNumber value={`${item.partidoDelPueblo.toFixed(1)}%`} />
+                              </span>
                             </div>
 
                             <div className="h-2 overflow-hidden rounded-full bg-emerald-100">
@@ -1209,12 +1240,12 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
           <motion.div
             initial="hidden"
             animate="visible"
             variants={sectionVariants}
-            className="xl:col-span-7"
+            className="min-w-0"
           >
             <Card className="h-full rounded-2xl border border-orange-100 bg-white shadow-sm">
               <CardHeader className="pb-2">
@@ -1267,9 +1298,10 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                               </span>
 
                               <div className="flex shrink-0 items-center gap-2">
-                                <span className="text-sm font-black text-[#24130A]">
-                                  {formatNumber(partido.votes)}
-                                </span>
+                                <RollingNumber
+                                  value={formatNumber(partido.votes)}
+                                  className="text-sm font-black text-[#24130A]"
+                                />
                                 <span
                                   className="rounded-lg px-2 py-0.5 text-xs font-black"
                                   style={{
@@ -1277,7 +1309,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                                     color: partido.color,
                                   }}
                                 >
-                                  {partido.progress.toFixed(1)}%
+                                  <RollingNumber value={`${partido.progress.toFixed(1)}%`} />
                                 </span>
                               </div>
                             </div>
@@ -1309,7 +1341,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
             initial="hidden"
             animate="visible"
             variants={sectionVariants}
-            className="xl:col-span-5"
+            className="min-w-0"
           >
             <Card className="h-full rounded-2xl border border-orange-100 bg-white shadow-sm">
               <CardHeader className="pb-2">
@@ -1434,7 +1466,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                         </TableCell>
 
                         <TableCell className="py-4 text-sm font-black text-[#24130A]">
-                          {acta.mesa}
+                          <RollingNumber value={acta.mesa} />
                         </TableCell>
 
                         <TableCell className="py-4 text-right text-sm font-black text-[#24130A]">
@@ -1459,6 +1491,69 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
         </motion.div>
       </div>
     </div>
+  );
+}
+
+function RollingNumber({ value, className = '', style }: RollingNumberProps) {
+  const text = String(value);
+  const characters = Array.from(text);
+
+  const getCharacterWidth = (character: string) => {
+    if (character === ',') return '0.22em';
+    if (character === '.') return '0.22em';
+    if (character === '%') return '0.58em';
+    if (character === ' ') return '0.28em';
+    return '0.58em';
+  };
+
+  return (
+    <span
+      className={`inline-flex max-w-full items-baseline whitespace-nowrap tabular-nums ${className}`}
+      style={style}
+      aria-label={text}
+    >
+      {characters.map((character, index) => (
+        <span
+          key={`${index}-${character}`}
+          className="relative inline-flex h-[1.18em] overflow-visible align-baseline leading-none"
+          style={{
+            minWidth: getCharacterWidth(character),
+            perspective: 120,
+          }}
+        >
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+              key={`${character}-${index}-${text}`}
+              initial={{
+                y: '0.9em',
+                rotateX: 90,
+                opacity: 0,
+                filter: 'blur(2px)',
+              }}
+              animate={{
+                y: '0em',
+                rotateX: 0,
+                opacity: 1,
+                filter: 'blur(0px)',
+              }}
+              exit={{
+                y: '-0.9em',
+                rotateX: -90,
+                opacity: 0,
+                filter: 'blur(2px)',
+              }}
+              transition={{
+                duration: 0.7,
+                ease: [0.16, 1, 0.3, 1],
+              }}
+              className="inline-block origin-center leading-none"
+            >
+              {character === ' ' ? '\u00A0' : character}
+            </motion.span>
+          </AnimatePresence>
+        </span>
+      ))}
+    </span>
   );
 }
 

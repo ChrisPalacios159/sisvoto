@@ -4,9 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
   Users,
-  Flag,
   FileText,
-  Hash,
   BarChart3,
   Settings,
   LogOut,
@@ -35,9 +33,13 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'personeros', label: 'Personeros', icon: Users },
-  { id: 'partidos', label: 'Partidos Políticos', icon: Flag },
+
+  /*
+    Los módulos "Partidos Políticos" y "Mesas Electorales"
+    existen en el sistema, pero están ocultos del menú lateral.
+  */
+
   { id: 'actas', label: 'Actas Registradas', icon: FileText },
-  { id: 'mesas', label: 'Mesas Electorales', icon: Hash },
   { id: 'reportes', label: 'Reportes', icon: BarChart3 },
   { id: 'configuracion', label: 'Configuración', icon: Settings },
 ];

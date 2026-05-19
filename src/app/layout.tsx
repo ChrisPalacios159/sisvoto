@@ -1,24 +1,35 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Manrope, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const manrope = Manrope({
+  variable: "--font-manrope",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Sistema Electoral - Plataforma de Monitoreo Electoral",
-  description: "Plataforma web administrativa para monitoreo electoral en tiempo real. Gestión de personeros, actas, mesas electorales y resultados.",
-  keywords: ["Sistema Electoral", "Monitoreo Electoral", "Perú", "Resultados", "Actas", "Personeros"],
+  description:
+    "Plataforma web administrativa para monitoreo electoral en tiempo real. Gestión de personeros, actas, mesas electorales y resultados.",
+  keywords: [
+    "Sistema Electoral",
+    "Monitoreo Electoral",
+    "Perú",
+    "Resultados",
+    "Actas",
+    "Personeros",
+  ],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/images/k.png",
   },
 };
 
@@ -30,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${manrope.variable} ${geistMono.variable} min-h-screen bg-background font-sans text-foreground antialiased`}
       >
         {children}
         <Toaster />
