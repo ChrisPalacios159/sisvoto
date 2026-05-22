@@ -44,6 +44,9 @@ import {
   Image as ImageIcon,
   Filter,
   X,
+  Ban,
+  Square,
+  BarChart3,
 } from 'lucide-react';
 import {
   type ActaRegistrada,
@@ -160,19 +163,19 @@ export default function Actas() {
     filterDepartamento !== 'todos';
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-8">
+      {/* Header - Gradiente Mejorado */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#FF6B00]/10">
-            <FileText className="h-5 w-5 text-[#FF6B00]" />
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#FF6B00] to-[#E55E00] shadow-md shadow-[#FF6B00]/20">
+            <FileText className="h-6 w-6 text-white" />
           </div>
 
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">
+            <h2 className="text-2xl font-extrabold tracking-tight text-[#1F1308] dark:text-orange-50">
               Actas Registradas
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground mt-0.5">
               Consulta y validación de actas electorales
             </p>
           </div>
@@ -180,23 +183,23 @@ export default function Actas() {
 
         <Badge
           variant="secondary"
-          className="w-fit border-[#FF6B00]/20 bg-[#FF6B00]/10 px-3 py-1 text-sm text-[#FF6B00]"
+          className="w-fit border border-[#FF6B00]/30 bg-gradient-to-r from-[#FF6B00]/10 to-[#E55E00]/5 px-4 py-1.5 text-sm font-semibold text-[#FF6B00] shadow-sm"
         >
           {actasMock.length} actas registradas
         </Badge>
       </div>
 
-      {/* Search and Filters */}
-      <Card className="border-border/50 shadow-sm">
-        <CardContent className="p-4">
+      {/* Search and Filters - Card Mejorada */}
+      <Card className="border-border/50 bg-gradient-to-b from-white to-orange-50/30 shadow-sm dark:from-[#1A0D06] dark:to-[#1A0D06]/80">
+        <CardContent className="p-5">
           <div className="flex flex-col gap-3 sm:flex-row">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#FF6B00]/60" />
               <Input
                 placeholder="Buscar por número de mesa..."
                 value={searchMesa}
                 onChange={(e) => setSearchMesa(e.target.value)}
-                className="border-[#FF6B00]/30 bg-white pl-9 text-[#1F1308] shadow-sm placeholder:text-[#8A6A4F] focus:border-[#FF6B00] focus:ring-[#FF6B00]/20 dark:bg-[#1A0D06] dark:text-orange-50 dark:placeholder:text-orange-100/60"
+                className="border-[#FF6B00]/30 bg-white pl-10 text-[#1F1308] shadow-sm placeholder:text-[#8A6A4F] focus:border-[#FF6B00] focus:ring-[#FF6B00]/20 dark:bg-[#1A0D06] dark:text-orange-50 dark:placeholder:text-orange-100/60"
               />
             </div>
 
@@ -254,7 +257,7 @@ export default function Actas() {
                 variant="ghost"
                 size="icon"
                 onClick={clearFilters}
-                className="h-10 w-10 shrink-0 text-[#FF6B00] hover:bg-[#FF6B00]/10 hover:text-[#E55E00]"
+                className="h-10 w-10 shrink-0 rounded-lg bg-[#FF6B00]/10 text-[#FF6B00] hover:bg-[#FF6B00]/20 hover:text-[#E55E00] transition-colors"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -263,42 +266,42 @@ export default function Actas() {
         </CardContent>
       </Card>
 
-      {/* Table */}
-      <Card className="border-border/50 shadow-sm">
+      {/* Table - Diseño type Dashboard */}
+      <Card className="border-border/50 overflow-hidden shadow-sm">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-border/50 hover:bg-transparent">
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                <TableRow className="border-b border-[#FF6B00]/20 bg-gradient-to-r from-[#FFF7ED] to-[#FFECD2] hover:bg-[#FFECD2] dark:from-[#1A0D06] dark:to-[#2A1A0E]">
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-[#9A5B2B] dark:text-orange-200">
                     N° Mesa
                   </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-[#9A5B2B] dark:text-orange-200">
                     Personero
                   </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-[#9A5B2B] dark:text-orange-200">
                     Departamento
                   </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-[#9A5B2B] dark:text-orange-200">
                     Provincia
                   </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-[#9A5B2B] dark:text-orange-200">
                     Distrito
                   </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-[#9A5B2B] dark:text-orange-200">
                     Local de Votación
                   </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-[#9A5B2B] dark:text-orange-200">
                     Fecha/Hora
                   </TableHead>
-                  <TableHead className="text-right text-xs font-semibold uppercase tracking-wider">
+                  <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-[#9A5B2B] dark:text-orange-200">
                     Total Votos
                   </TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-wider">
+                  <TableHead className="text-xs font-bold uppercase tracking-wider text-[#9A5B2B] dark:text-orange-200">
                     Estado
                   </TableHead>
-                  <TableHead className="text-center text-xs font-semibold uppercase tracking-wider">
-                    Ver Detalle
+                  <TableHead className="text-center text-xs font-bold uppercase tracking-wider text-[#9A5B2B] dark:text-orange-200">
+                    Acción
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -317,41 +320,44 @@ export default function Actas() {
                   filteredActas.map((acta) => (
                     <TableRow
                       key={acta.id}
-                      className="cursor-pointer border-b border-border/30 transition-colors hover:bg-[#FF6B00]/5"
+                      className="cursor-pointer border-b border-border/30 transition-all duration-200 hover:bg-[#FF6B00]/5 hover:shadow-sm"
                       onClick={() => handleViewDetail(acta)}
                     >
-                      <TableCell className="font-mono font-semibold text-[#FF6B00]">
-                        {acta.numeroMesa}
+                      <TableCell>
+                        <span className="rounded-md bg-[#FF6B00]/10 px-2 py-1 font-mono text-sm font-bold text-[#FF6B00]">
+                          {acta.numeroMesa}
+                        </span>
                       </TableCell>
 
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium text-[#1F1308] dark:text-orange-50">
                         {acta.personeroNombre}
                       </TableCell>
 
-                      <TableCell>{acta.departamento}</TableCell>
-                      <TableCell>{acta.provincia}</TableCell>
-                      <TableCell>{acta.distrito}</TableCell>
+                      <TableCell className="text-muted-foreground">{acta.departamento}</TableCell>
+                      <TableCell className="text-muted-foreground">{acta.provincia}</TableCell>
+                      <TableCell className="text-muted-foreground">{acta.distrito}</TableCell>
 
-                      <TableCell className="max-w-[180px] truncate">
+                      <TableCell className="max-w-[180px] truncate text-muted-foreground">
                         {acta.localVotacion}
                       </TableCell>
 
                       <TableCell>
                         <div className="flex flex-col text-xs">
-                          <span>{acta.fechaRegistro}</span>
+                          <span className="font-medium text-[#1F1308] dark:text-orange-50">{acta.fechaRegistro}</span>
                           <span className="text-muted-foreground">
                             {acta.horaRegistro}
                           </span>
                         </div>
                       </TableCell>
 
-                      <TableCell className="text-right font-semibold">
+                      <TableCell className="text-right font-bold tabular-nums text-[#1F1308] dark:text-orange-50">
                         {acta.totalVotos.toLocaleString()}
                       </TableCell>
 
                       <TableCell>
                         <Badge
-                          className={`${estadoColorMap[acta.estadoValidacion]} text-xs`}
+                          variant="outline"
+                          className={`${estadoColorMap[acta.estadoValidacion]} text-xs font-semibold`}
                         >
                           {estadoLabelMap[acta.estadoValidacion]}
                         </Badge>
@@ -361,7 +367,7 @@ export default function Actas() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-[#FF6B00] hover:bg-[#FF6B00]/10"
+                          className="h-9 w-9 rounded-lg text-[#FF6B00] hover:bg-[#FF6B00]/10 hover:text-[#E55E00] transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleViewDetail(acta);
@@ -378,26 +384,26 @@ export default function Actas() {
           </div>
 
           {filteredActas.length > 0 && (
-            <div className="border-t border-border/30 px-4 py-3 text-xs text-muted-foreground">
+            <div className="border-t border-[#FF6B00]/10 bg-[#FFF7ED]/50 px-6 py-3 text-xs font-medium text-[#9A5B2B] dark:bg-[#1A0D06] dark:text-orange-200">
               Mostrando {filteredActas.length} de {actasMock.length} actas
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Detail View */}
+      {/* Detail View - Modal Premium */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto border border-[#FF6B00]/30 bg-[#FFF7ED] p-0 text-[#1F1308] shadow-2xl dark:bg-[#1A0D06] dark:text-orange-50 sm:max-w-2xl">
           {selectedActa && (
             <div className="space-y-0">
-              {/* Dialog Header */}
-              <DialogHeader className="border-b border-[#FF6B00]/20 bg-[#FF6B00]/10 p-6 pb-4">
-                <DialogTitle className="flex items-center gap-2 text-lg text-[#1F1308] dark:text-orange-50">
-                  <FileText className="h-5 w-5 text-[#FF6B00]" />
+              {/* Dialog Header con Gradiente */}
+              <DialogHeader className="border-b border-[#FF6B00]/20 bg-gradient-to-r from-[#FF6B00] to-[#E55E00] p-6 pb-4">
+                <DialogTitle className="flex items-center gap-2 text-lg font-bold text-white">
+                  <FileText className="h-5 w-5 text-white/90" />
                   Acta - Mesa {selectedActa.numeroMesa}
                 </DialogTitle>
 
-                <DialogDescription className="text-[#6B4A2B] dark:text-orange-100/70">
+                <DialogDescription className="text-white/80">
                   Detalle completo del acta electoral
                 </DialogDescription>
               </DialogHeader>
@@ -405,12 +411,12 @@ export default function Actas() {
               <div className="space-y-6 p-6">
                 {/* Datos del Personero */}
                 <section>
-                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
+                  <h4 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[#1F1308] dark:text-orange-50">
                     <User className="h-4 w-4 text-[#FF6B00]" />
                     Datos del Personero
                   </h4>
 
-                  <div className="grid grid-cols-1 gap-3 rounded-lg border border-[#FF6B00]/15 bg-white p-4 dark:bg-white/10 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 rounded-xl border border-[#FF6B00]/15 bg-white/70 p-5 shadow-sm backdrop-blur-sm dark:bg-white/5 sm:grid-cols-2">
                     {(() => {
                       const personero = getPersoneroDetails(
                         selectedActa.personeroId
@@ -419,37 +425,37 @@ export default function Actas() {
                       return personero ? (
                         <>
                           <div>
-                            <span className="text-xs text-muted-foreground">
-                              Nombre
+                            <span className="text-xs font-semibold text-[#FF6B00]">
+                              Nombre Completo
                             </span>
-                            <p className="text-sm font-medium">
+                            <p className="mt-1 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
                               {personero.nombreCompleto}
                             </p>
                           </div>
 
                           <div>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs font-semibold text-[#FF6B00]">
                               DNI
                             </span>
-                            <p className="font-mono text-sm font-medium">
+                            <p className="mt-1 font-mono text-sm font-semibold text-[#1F1308] dark:text-orange-50">
                               {personero.dni}
                             </p>
                           </div>
 
                           <div>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs font-semibold text-[#FF6B00]">
                               Celular
                             </span>
-                            <p className="font-mono text-sm font-medium">
+                            <p className="mt-1 font-mono text-sm font-semibold text-[#1F1308] dark:text-orange-50">
                               {personero.celular}
                             </p>
                           </div>
 
                           <div>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs font-semibold text-[#FF6B00]">
                               Correo
                             </span>
-                            <p className="text-sm font-medium">
+                            <p className="mt-1 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
                               {personero.correo}
                             </p>
                           </div>
@@ -463,161 +469,163 @@ export default function Actas() {
                   </div>
                 </section>
 
-                <Separator className="bg-[#FF6B00]/20" />
+                <Separator className="bg-[#FF6B00]/10" />
 
                 {/* Ubicación */}
                 <section>
-                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
+                  <h4 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[#1F1308] dark:text-orange-50">
                     <MapPin className="h-4 w-4 text-[#FF6B00]" />
                     Ubicación
                   </h4>
 
-                  <div className="grid grid-cols-1 gap-3 rounded-lg border border-[#FF6B00]/15 bg-white p-4 dark:bg-white/10 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-4 rounded-xl border border-[#FF6B00]/15 bg-white/70 p-5 shadow-sm backdrop-blur-sm dark:bg-white/5 sm:grid-cols-2">
                     <div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs font-semibold text-[#FF6B00]">
                         Departamento
                       </span>
-                      <p className="text-sm font-medium">
+                      <p className="mt-1 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
                         {selectedActa.departamento}
                       </p>
                     </div>
 
                     <div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs font-semibold text-[#FF6B00]">
                         Provincia
                       </span>
-                      <p className="text-sm font-medium">
+                      <p className="mt-1 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
                         {selectedActa.provincia}
                       </p>
                     </div>
 
                     <div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs font-semibold text-[#FF6B00]">
                         Distrito
                       </span>
-                      <p className="text-sm font-medium">
+                      <p className="mt-1 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
                         {selectedActa.distrito}
                       </p>
                     </div>
 
                     <div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs font-semibold text-[#FF6B00]">
                         Local de Votación
                       </span>
-                      <p className="text-sm font-medium">
+                      <p className="mt-1 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
                         {selectedActa.localVotacion}
                       </p>
                     </div>
                   </div>
                 </section>
 
-                <Separator className="bg-[#FF6B00]/20" />
+                <Separator className="bg-[#FF6B00]/10" />
 
                 {/* Datos del Acta */}
                 <section>
-                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
+                  <h4 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[#1F1308] dark:text-orange-50">
                     <Calendar className="h-4 w-4 text-[#FF6B00]" />
                     Datos del Acta
                   </h4>
 
-                  <div className="grid grid-cols-1 gap-3 rounded-lg border border-[#FF6B00]/15 bg-white p-4 dark:bg-white/10 sm:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 rounded-xl border border-[#FF6B00]/15 bg-white/70 p-5 shadow-sm backdrop-blur-sm dark:bg-white/5 sm:grid-cols-3">
                     <div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs font-semibold text-[#FF6B00]">
                         N° Mesa
                       </span>
-                      <p className="font-mono text-sm font-semibold text-[#FF6B00]">
+                      <p className="mt-1 font-mono text-lg font-extrabold text-[#FF6B00]">
                         {selectedActa.numeroMesa}
                       </p>
                     </div>
 
                     <div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs font-semibold text-[#FF6B00]">
                         <Calendar className="mr-1 inline h-3 w-3" />
                         Fecha
                       </span>
-                      <p className="text-sm font-medium">
+                      <p className="mt-1 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
                         {selectedActa.fechaRegistro}
                       </p>
                     </div>
 
                     <div>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs font-semibold text-[#FF6B00]">
                         <Clock className="mr-1 inline h-3 w-3" />
                         Hora
                       </span>
-                      <p className="text-sm font-medium">
+                      <p className="mt-1 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
                         {selectedActa.horaRegistro}
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-3">
+                  <div className="mt-4">
                     <Badge
-                      className={`${estadoColorMap[selectedActa.estadoValidacion]} px-3 py-1 text-sm`}
+                      variant="outline"
+                      className={`${estadoColorMap[selectedActa.estadoValidacion]} px-4 py-1.5 text-sm font-bold border`}
                     >
                       Estado: {estadoLabelMap[selectedActa.estadoValidacion]}
                     </Badge>
                   </div>
                 </section>
 
-                <Separator className="bg-[#FF6B00]/20" />
+                <Separator className="bg-[#FF6B00]/10" />
 
                 {/* Imagen del Acta */}
                 <section>
-                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
+                  <h4 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[#1F1308] dark:text-orange-50">
                     <ImageIcon className="h-4 w-4 text-[#FF6B00]" />
                     Imagen del Acta
                   </h4>
 
-                  <div className="overflow-hidden rounded-lg border border-[#FF6B00]/20 bg-white p-3 dark:bg-white/10">
+                  <div className="overflow-hidden rounded-xl border border-[#FF6B00]/20 bg-white p-3 shadow-inner dark:bg-white/5">
                     <img
                       src={ACTA_IMAGE_SRC}
                       alt={`Imagen del acta de la mesa ${selectedActa.numeroMesa}`}
-                      className="h-auto max-h-[520px] w-full object-contain"
+                      className="h-auto max-h-[520px] w-full rounded-lg object-contain"
                     />
                   </div>
                 </section>
 
-                <Separator className="bg-[#FF6B00]/20" />
+                <Separator className="bg-[#FF6B00]/10" />
 
                 {/* Votos por Partido */}
                 <section>
-                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
+                  <h4 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[#1F1308] dark:text-orange-50">
                     <Vote className="h-4 w-4 text-[#FF6B00]" />
                     Votos por Partido
                   </h4>
 
-                  <div className="space-y-4 rounded-lg border border-[#FF6B00]/15 bg-white p-4 dark:bg-white/10">
+                  <div className="space-y-5 rounded-xl border border-[#FF6B00]/15 bg-white/70 p-5 shadow-sm backdrop-blur-sm dark:bg-white/5">
                     {partidosDetalle.map((vp) => (
-                      <div key={vp.partidoId} className="space-y-1.5">
+                      <div key={vp.partidoId} className="space-y-2">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2.5">
                             <span
-                              className="inline-block h-3.5 w-3.5 shrink-0 rounded-full"
+                              className="inline-block h-4 w-4 shrink-0 rounded-full shadow-sm"
                               style={{ backgroundColor: vp.partidoColor }}
                             />
-                            <span className="text-sm font-semibold">
+                            <span className="text-sm font-bold text-[#1F1308] dark:text-orange-50">
                               {vp.partidoNombre}
                             </span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-muted-foreground font-semibold">
                               ({vp.partidoSiglas})
                             </span>
                           </div>
 
                           <span
-                            className="text-sm font-bold tabular-nums"
+                            className="text-base font-extrabold tabular-nums"
                             style={{ color: vp.partidoColor }}
                           >
                             {vp.votos.toLocaleString()}
                           </span>
                         </div>
 
-                        <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#F3E3D4] dark:bg-white/10">
+                        <div className="h-3 w-full overflow-hidden rounded-full bg-[#F3E3D4]/70 shadow-inner dark:bg-white/10">
                           <div
-                            className="h-full rounded-full transition-all duration-500"
+                            className="h-full rounded-full transition-all duration-700 ease-out"
                             style={{
                               width: `${(vp.votos / maxVotos) * 100}%`,
-                              backgroundColor: vp.partidoColor,
+                              background: `linear-gradient(90deg, ${vp.partidoColor} 0%, ${vp.partidoColor}CC 100%)`,
+                              boxShadow: `0 0 8px ${vp.partidoColor}40`
                             }}
                           />
                         </div>
@@ -626,39 +634,48 @@ export default function Actas() {
                   </div>
                 </section>
 
-                <Separator className="bg-[#FF6B00]/20" />
+                <Separator className="bg-[#FF6B00]/10" />
 
-                {/* Resumen */}
+                {/* Resumen - Style Dashboard Cards */}
                 <section>
-                  <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#1F1308] dark:text-orange-50">
-                    <Vote className="h-4 w-4 text-[#FF6B00]" />
-                    Resumen
+                  <h4 className="mb-4 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-[#1F1308] dark:text-orange-50">
+                    <BarChart3 className="h-4 w-4 text-[#FF6B00]" />
+                    Resumen de Votación
                   </h4>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div className="rounded-lg border border-red-100 bg-red-50 p-4 text-center">
-                      <span className="text-xs font-medium text-red-600">
+                    <div className="relative overflow-hidden rounded-xl border border-red-100 bg-gradient-to-br from-red-50 to-red-100/50 p-5 shadow-sm dark:from-red-900/20 dark:to-red-800/10 dark:border-red-900/30">
+                      <div className="absolute -right-2 -top-2 text-red-100 dark:text-red-900/30">
+                        <Ban className="h-16 w-16" />
+                      </div>
+                      <span className="relative text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
                         Votos Nulos
                       </span>
-                      <p className="mt-1 text-2xl font-bold text-red-700">
+                      <p className="relative mt-2 text-3xl font-extrabold text-red-700 dark:text-red-300">
                         {selectedActa.votosNulos}
                       </p>
                     </div>
 
-                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-4 text-center">
-                      <span className="text-xs font-medium text-gray-600">
+                    <div className="relative overflow-hidden rounded-xl border border-gray-100 bg-gradient-to-br from-gray-50 to-gray-100/50 p-5 shadow-sm dark:from-gray-900/20 dark:to-gray-800/10 dark:border-gray-900/30">
+                      <div className="absolute -right-2 -top-2 text-gray-100 dark:text-gray-900/30">
+                        <Square className="h-16 w-16" />
+                      </div>
+                      <span className="relative text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
                         Votos en Blanco
                       </span>
-                      <p className="mt-1 text-2xl font-bold text-gray-700">
+                      <p className="relative mt-2 text-3xl font-extrabold text-gray-700 dark:text-gray-300">
                         {selectedActa.votosBlanco}
                       </p>
                     </div>
 
-                    <div className="rounded-lg border border-[#FF6B00]/10 bg-white p-4 text-center dark:bg-white/10">
-                      <span className="text-xs font-medium text-[#FF6B00]">
+                    <div className="relative overflow-hidden rounded-xl border border-[#FF6B00]/20 bg-gradient-to-br from-[#FFF7ED] to-[#FFECD2] p-5 shadow-sm dark:from-orange-900/20 dark:to-orange-800/10 dark:border-orange-900/30">
+                      <div className="absolute -right-2 -top-2 text-[#FF6B00]/10 dark:text-orange-900/20">
+                        <Vote className="h-16 w-16" />
+                      </div>
+                      <span className="relative text-xs font-bold uppercase tracking-wider text-[#FF6B00] dark:text-orange-400">
                         Total Votos
                       </span>
-                      <p className="mt-1 text-2xl font-bold text-[#FF6B00]">
+                      <p className="relative mt-2 text-3xl font-extrabold text-[#FF6B00] dark:text-orange-300">
                         {selectedActa.totalVotos.toLocaleString()}
                       </p>
                     </div>
@@ -667,13 +684,12 @@ export default function Actas() {
               </div>
 
               {/* Footer */}
-              <DialogFooter className="border-t border-[#FF6B00]/20 bg-[#FF6B00]/10 p-6 pt-4">
+              <DialogFooter className="border-t border-[#FF6B00]/20 bg-[#FFF7ED]/80 p-6 pt-4 dark:bg-[#1A0D06]/80">
                 <Button
-                  variant="outline"
                   onClick={() => setDetailOpen(false)}
-                  className="border-[#FF6B00]/30 bg-white text-[#1F1308] hover:bg-[#FFF1E6] dark:bg-white/10 dark:text-orange-50 dark:hover:bg-white/20"
+                  className="bg-gradient-to-r from-[#FF6B00] to-[#E55E00] text-white font-bold hover:from-[#E55E00] hover:to-[#CC5200] shadow-md shadow-[#FF6B00]/20 transition-all"
                 >
-                  Cerrar
+                  Cerrar Detalle
                 </Button>
               </DialogFooter>
             </div>

@@ -1,5 +1,7 @@
 // Types for the Electoral Administration System
 
+import { ReactNode } from "react";
+
 export type ModuleView =
   | "dashboard"
   | "personeros"

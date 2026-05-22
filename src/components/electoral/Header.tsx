@@ -1,8 +1,8 @@
-'use client';
+'use client'
 
-import { motion } from 'framer-motion';
-import { Menu, Bell, User, LogOut, ChevronDown, Radio } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion'
+import { Menu, Bell, User, LogOut, ChevronDown, Radio } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,27 +10,49 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+} from '@/components/ui/dropdown-menu'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 
 interface HeaderProps {
-  moduleName: string;
-  onMenuToggle: () => void;
-  userName?: string;
+  moduleName: string
+  onMenuToggle: () => void
+  onLogout?: () => void
+  userName?: string
+  roleName?: string
 }
 
 export default function Header({
   moduleName,
   onMenuToggle,
+  onLogout,
   userName = 'Administrador',
+  roleName = 'ADMINISTRADOR',
 }: HeaderProps) {
   const initials = userName
     .split(' ')
+    .filter(Boolean)
     .map((w) => w[0])
     .join('')
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2)
+
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout()
+      return
+    }
+
+    localStorage.removeItem('token')
+    localStorage.removeItem('nombrePersona')
+    localStorage.removeItem('rol')
+    localStorage.removeItem('paginas')
+    localStorage.removeItem('controles')
+    localStorage.removeItem('usuarioInfo')
+    localStorage.removeItem('rememberMe')
+
+    window.location.reload()
+  }
 
   return (
     <header
@@ -40,9 +62,7 @@ export default function Header({
         boxShadow: '0 2px 12px rgba(255,107,0,0.2)',
       }}
     >
-      {/* Left section */}
       <div className="flex items-center gap-3">
-        {/* Mobile menu toggle */}
         <Button
           variant="ghost"
           size="icon"
@@ -53,7 +73,6 @@ export default function Header({
           <Menu className="h-5 w-5" />
         </Button>
 
-        {/* Module title / Breadcrumb */}
         <motion.div
           key={moduleName}
           initial={{ opacity: 0, x: -8 }}
@@ -69,15 +88,14 @@ export default function Header({
         </motion.div>
       </div>
 
-      {/* Right section */}
       <div className="ml-auto flex items-center gap-2 md:gap-3">
-        {/* Live indicator */}
         <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm border border-white/10">
           <Radio className="w-3 h-3 text-white animate-pulse" />
-          <span className="text-[10px] font-bold text-white tracking-wide">EN VIVO</span>
+          <span className="text-[10px] font-bold text-white tracking-wide">
+            EN VIVO
+          </span>
         </div>
 
-        {/* Notification bell */}
         <Button
           variant="ghost"
           size="icon"
@@ -90,38 +108,72 @@ export default function Header({
           </Badge>
         </Button>
 
-        {/* User dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="flex items-center gap-2 rounded-full pl-1.5 pr-2.5 hover:bg-white/15 text-white"
+              className="flex items-center gap-2 rounded-full pl-1.5 pr-2.5 text-white hover:bg-white/15"
             >
               <Avatar className="h-7 w-7 border-2 border-white/30">
-                <AvatarFallback className="bg-white/20 text-white text-[10px] font-bold border-0">
-                  {initials}
+                <AvatarFallback className="border-0 bg-white/20 text-[10px] font-bold text-white">
+                  {initials || 'AD'}
                 </AvatarFallback>
               </Avatar>
+
               <span className="hidden text-sm font-medium md:inline">
                 {userName}
               </span>
+
               <ChevronDown className="h-3 w-3 text-white/50" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="font-normal">
+
+          <DropdownMenuContent
+            align="end"
+            sideOffset={8}
+            className="
+              z-50 w-60 overflow-hidden rounded-xl
+              border border-orange-200/40
+              bg-white text-gray-900
+              shadow-xl shadow-black/15
+            "
+          >
+            <DropdownMenuLabel className="bg-orange-50 px-4 py-3 font-normal">
               <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium">{userName}</p>
-                <p className="text-xs text-muted-foreground">admin@electoral.gob</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {userName}
+                </p>
+                <p className="text-xs font-medium text-orange-700">
+                  {roleName}
+                </p>
               </div>
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer">
-              <User className="mr-2 h-4 w-4" />
+
+            <DropdownMenuSeparator className="bg-orange-100" />
+
+            <DropdownMenuItem
+              className="
+                cursor-pointer px-4 py-2.5 text-gray-700
+                focus:bg-orange-50 focus:text-gray-900
+              "
+            >
+              <User className="mr-2 h-4 w-4 text-orange-600" />
               Mi Perfil
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600">
+
+            <DropdownMenuSeparator className="bg-orange-100" />
+
+            <DropdownMenuItem
+              className="
+                cursor-pointer px-4 py-2.5 text-red-600
+                focus:bg-red-50 focus:text-red-700
+              "
+              onClick={handleLogout}
+              onSelect={(event) => {
+                event.preventDefault()
+                handleLogout()
+              }}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               Cerrar Sesión
             </DropdownMenuItem>
@@ -129,5 +181,5 @@ export default function Header({
         </DropdownMenu>
       </div>
     </header>
-  );
+  )
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import {
@@ -14,9 +14,6 @@ import {
   Cell,
 } from 'recharts';
 import {
-  Vote,
-  FileText,
-  TrendingUp,
   MapPin,
   Clock,
   Filter,
@@ -29,11 +26,11 @@ import {
   Download,
   Radio,
   Eye,
-  ShieldCheck,
   BarChart3,
+  RefreshCcw,
 } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -46,11 +43,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart';
 
 import {
   FiltrosGenerales,
@@ -62,11 +54,10 @@ import {
 import {
   partidosMock,
   actasMock,
-  mesasMock,
-  personerosMock,
   calcularVotosTotales,
-  calcularPorcentajes,
 } from '@/data/mock';
+
+import { apiService } from '@/data/api/services/apis.service';
 
 interface DashboardProps {
   filtros: FiltrosGenerales;
@@ -75,6 +66,7 @@ interface DashboardProps {
 
 interface CandidateDashboard {
   id: string;
+  idPartido: number;
   displayName: string;
   partyName: string;
   partyShortName: string;
@@ -87,12 +79,6 @@ interface CandidateDashboard {
   progress: number;
 }
 
-interface TerritorialItem {
-  departamento: string;
-  fuerzaPopular: number;
-  partidoDelPueblo: number;
-}
-
 interface LiveStats {
   actasValidadas: number;
   actasObservadas: number;
@@ -103,6 +89,24 @@ interface LiveStats {
   activePersoneros: number;
 }
 
+interface KpisGenerales {
+  TOTALACTAS: number;
+  ACTASVALIDADAS: number;
+  ACTASOBSERVADAS: number;
+  ACTASPENDIENTES: number;
+  PERSONEROSACTIVOS: number;
+  TOTALVOTOSPARTIDOS: number;
+  TOTALVOTOSESPECIALES: number;
+  VOTOSBLANCOS: number;
+  VOTOSNULOS: number;
+  VOTOSIMPUGNADOS: number;
+  TOTALVOTOSGENERAL: number;
+  DIFERENCIAPRIMERSEGUNDO: number;
+  PORCENTAJEMARGEN: number;
+  PARTICIPACION: number;
+  AVANCEGENERAL: number;
+}
+
 interface DepartmentVotes {
   departamento: string;
   votos: number;
@@ -110,6 +114,9 @@ interface DepartmentVotes {
 
 interface TimelineItem {
   hora: string;
+  fechaHora: string;
+  actasRegistradas: number;
+  votosPartidos: number;
   votos: number;
 }
 
@@ -128,60 +135,108 @@ interface RollingNumberProps {
   style?: React.CSSProperties;
 }
 
+interface DepartamentoApi {
+  CODDEPARTAMENTO: string;
+  TXTNOMBRE: string;
+  CODIGOUBIGEO: string | null;
+  ESTADO: boolean;
+}
+
+interface ProvinciaApi {
+  CODPROVINCIA: string;
+  CODDEPARTAMENTO: string;
+  DEPARTAMENTO: string;
+  CODIGOUBIGEO: string | null;
+  TXTNOMBRE: string;
+  ESTADO: boolean;
+}
+
+interface DistritoApi {
+  CODDISTRITO: string;
+  CODDEPARTAMENTO: string;
+  DEPARTAMENTO: string;
+  CODPROVINCIA: string;
+  PROVINCIA: string;
+  CODIGOUBIGEO: string | null;
+  TXTNOMBRE: string;
+  ESTADO: boolean;
+}
+
+interface DistribucionTerritorialApi {
+  NIVEL?: string;
+  Nivel?: string;
+  CODIGOUBICACION?: string;
+  CodigoUbicacion?: string;
+  NOMBREUBICACION?: string;
+  NombreUbicacion?: string;
+  IDPARTIDO?: number;
+  IdPartido?: number;
+  NOMBREPARTIDO?: string;
+  NombrePartido?: string;
+  SIGLAS?: string;
+  Siglas?: string;
+  LOGOPARTIDO?: string;
+  LogoPartido?: string;
+  COLOR?: string;
+  Color?: string;
+  TOTALVOTOS?: number;
+  TotalVotos?: number;
+  PORCENTAJE?: number;
+  Porcentaje?: number;
+}
+
+interface TerritorialParty {
+  idPartido: number;
+  nombrePartido: string;
+  siglas: string;
+  logoPartido: string;
+  color: string;
+  totalVotos: number;
+  porcentaje: number;
+}
+
+interface TerritorialGroup {
+  nivel: string;
+  codigoUbicacion: string;
+  nombreUbicacion: string;
+  partidos: TerritorialParty[];
+}
+
 const PRIMARY = '#F97316';
 const PRIMARY_DARK = '#C2410C';
 const PRIMARY_LIGHT = '#FDBA74';
 const GREEN = '#16A34A';
 const GREEN_DARK = '#15803D';
 const GREEN_LIGHT = '#DCFCE7';
+const SELECT_TODOS = 'TODOS';
 
+const KPIS_GENERALES_INICIALES: KpisGenerales = {
+  TOTALACTAS: 0,
+  ACTASVALIDADAS: 0,
+  ACTASOBSERVADAS: 0,
+  ACTASPENDIENTES: 0,
+  PERSONEROSACTIVOS: 0,
+  TOTALVOTOSPARTIDOS: 0,
+  TOTALVOTOSESPECIALES: 0,
+  VOTOSBLANCOS: 0,
+  VOTOSNULOS: 0,
+  VOTOSIMPUGNADOS: 0,
+  TOTALVOTOSGENERAL: 0,
+  DIFERENCIAPRIMERSEGUNDO: 0,
+  PORCENTAJEMARGEN: 0,
+  PARTICIPACION: 0,
+  AVANCEGENERAL: 0,
+};
 
-const numberClass = 'whitespace-nowrap font-black leading-none tracking-[-0.02em] tabular-nums';
 
 const selectTriggerClass =
-  'w-full rounded-xl border-orange-200 bg-white text-xs text-[#24130A] shadow-sm focus:border-orange-500 focus:ring-orange-500/20 data-[placeholder]:text-orange-900/45 disabled:cursor-not-allowed disabled:bg-orange-50 disabled:text-orange-900/30';
+  'w-full rounded-xl border-orange-200 bg-orange-50/80 text-xs text-[#24130A] shadow-sm focus:border-orange-500 focus:ring-orange-500/20 data-[placeholder]:text-orange-900/45 disabled:cursor-not-allowed disabled:bg-orange-50/40 disabled:text-orange-900/30 backdrop-blur-sm';
 
 const selectContentClass =
-  'border-orange-200 bg-white text-[#24130A] shadow-xl';
+  'rounded-xl border border-orange-200 bg-white p-1 shadow-xl max-h-[240px] overflow-auto';
 
 const selectItemClass =
-  'cursor-pointer text-xs font-semibold focus:bg-orange-50 focus:text-orange-700';
-
-const MAIN_CANDIDATES: CandidateDashboard[] = [
-  {
-    id: 'keiko',
-    displayName: 'Keiko Fujimori',
-    partyName: 'Fuerza Popular',
-    partyShortName: 'FP',
-    votes: 8860200,
-    photo: '/images/keiko.jpeg',
-    logo: '/images/k.png',
-    color: PRIMARY,
-    darkColor: PRIMARY_DARK,
-    accent: '#FFF7ED',
-    progress: 65,
-  },
-  {
-    id: 'roberto',
-    displayName: 'Roberto Sánchez',
-    partyName: 'Juntos por el Perú',
-    partyShortName: 'JP',
-    votes: 8790500,
-    photo: '/images/roberto.jpeg',
-    logo: '/images/jp.jpg',
-    color: GREEN,
-    darkColor: GREEN_DARK,
-    accent: GREEN_LIGHT,
-    progress: 58,
-  },
-];
-
-const INITIAL_TERRITORIAL_DATA: TerritorialItem[] = [
-  { departamento: 'Lima', fuerzaPopular: 65.2, partidoDelPueblo: 34.8 },
-  { departamento: 'Cusco', fuerzaPopular: 58.6, partidoDelPueblo: 41.4 },
-  { departamento: 'La Libertad', fuerzaPopular: 61.8, partidoDelPueblo: 38.2 },
-  { departamento: 'Piura', fuerzaPopular: 55.4, partidoDelPueblo: 44.6 },
-];
+  'rounded-lg cursor-pointer px-3 py-2 text-xs font-semibold text-[#24130A] focus:bg-orange-100 focus:text-orange-800 data-[state=checked]:bg-orange-50';
 
 const INITIAL_DEPARTMENT_VOTES: DepartmentVotes[] = [
   { departamento: 'Lima', votos: 1480200 },
@@ -190,17 +245,6 @@ const INITIAL_DEPARTMENT_VOTES: DepartmentVotes[] = [
   { departamento: 'Piura', votos: 612400 },
   { departamento: 'Arequipa', votos: 558700 },
   { departamento: 'Junín', votos: 421900 },
-];
-
-const INITIAL_TIMELINE: TimelineItem[] = [
-  { hora: '08:00 AM', votos: 180000 },
-  { hora: '09:00 AM', votos: 260000 },
-  { hora: '10:00 AM', votos: 340000 },
-  { hora: '11:00 AM', votos: 440000 },
-  { hora: '12:00 PM', votos: 570000 },
-  { hora: '01:00 PM', votos: 680000 },
-  { hora: '02:00 PM', votos: 790000 },
-  { hora: '03:00 PM', votos: 925000 },
 ];
 
 const INITIAL_LIVE_ACTAS: LiveActaRow[] = [
@@ -239,10 +283,7 @@ const INITIAL_LIVE_ACTAS: LiveActaRow[] = [
 ];
 
 const cardVariants: Variants = {
-  hidden: {
-    opacity: 0,
-    y: 18,
-  },
+  hidden: { opacity: 0, y: 18 },
   visible: (i: number = 0) => ({
     opacity: 1,
     y: 0,
@@ -255,10 +296,7 @@ const cardVariants: Variants = {
 };
 
 const sectionVariants: Variants = {
-  hidden: {
-    opacity: 0,
-    y: 22,
-  },
+  hidden: { opacity: 0, y: 22 },
   visible: {
     opacity: 1,
     y: 0,
@@ -269,12 +307,227 @@ const sectionVariants: Variants = {
   },
 };
 
+function normalizeHexColor(color?: string | null, fallback: string = PRIMARY) {
+  if (!color) return fallback;
+
+  const clean = color.replace('#', '').trim();
+
+  if (!clean) return fallback;
+
+  return `#${clean}`;
+}
+
+function getCandidateId(idPartido: number) {
+  if (idPartido === 1) return 'keiko';
+  if (idPartido === 2) return 'roberto';
+
+  return `partido-${idPartido}`;
+}
+
+function getCandidateDarkColor(idPartido: number, color: string) {
+  if (idPartido === 1) return PRIMARY_DARK;
+  if (idPartido === 2) return GREEN_DARK;
+
+  return color;
+}
+
+function getCandidateAccent(idPartido: number, color: string) {
+  if (idPartido === 1) return '#FFF7ED';
+  if (idPartido === 2) return GREEN_LIGHT;
+
+  return `${color}18`;
+}
+
+function mapResultadoPrincipalToCandidate(item: any, index: number): CandidateDashboard {
+  const idPartido = Number(item?.IDPARTIDO ?? index + 1);
+  const fallbackColor = idPartido === 2 ? GREEN : PRIMARY;
+  const color = normalizeHexColor(item?.COLOR, fallbackColor);
+
+  return {
+    id: getCandidateId(idPartido),
+    idPartido,
+    displayName: item?.NOMBREREPRESENTANTE ?? 'Sin representante',
+    partyName: item?.NOMBREPARTIDO ?? 'Sin partido',
+    partyShortName: item?.SIGLAS ?? '',
+    votes: Number(item?.TOTALVOTOS ?? 0),
+    photo: item?.IMAGENREPRESENTANTEURL ?? '',
+    logo: item?.LOGOPARTIDO ?? '',
+    color,
+    darkColor: getCandidateDarkColor(idPartido, color),
+    accent: getCandidateAccent(idPartido, color),
+    progress: Number(item?.PORCENTAJE ?? 0),
+  };
+}
+
+function formatHourAmPm(value?: string | null) {
+  if (!value) return '';
+
+  const hourText = value.split(':')[0];
+  const minuteText = value.split(':')[1] ?? '00';
+
+  const hour = Number(hourText);
+
+  if (Number.isNaN(hour)) return value;
+
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+
+  return `${hour12.toString().padStart(2, '0')}:${minuteText} ${period}`;
+}
+
+function mapLineaTiempoItem(item: any): TimelineItem {
+  return {
+    hora: formatHourAmPm(item?.HORA),
+    fechaHora: item?.FECHAHORA ?? '',
+    actasRegistradas: Number(item?.ACTASREGISTRADAS ?? 0),
+    votosPartidos: Number(item?.TOTALVOTOSPARTIDOS ?? 0),
+    votos: Number(item?.TOTALVOTOSGENERAL ?? 0),
+  };
+}
+
+function mapDistribucionItem(item: DistribucionTerritorialApi): {
+  nivel: string;
+  codigoUbicacion: string;
+  nombreUbicacion: string;
+  partido: TerritorialParty;
+} {
+  const idPartido = Number(item.IDPARTIDO ?? item.IdPartido ?? 0);
+  const color = normalizeHexColor(item.COLOR ?? item.Color, idPartido === 2 ? GREEN : PRIMARY);
+
+  return {
+    nivel: String(item.NIVEL ?? item.Nivel ?? ''),
+    codigoUbicacion: String(item.CODIGOUBICACION ?? item.CodigoUbicacion ?? ''),
+    nombreUbicacion: String(item.NOMBREUBICACION ?? item.NombreUbicacion ?? ''),
+    partido: {
+      idPartido,
+      nombrePartido: String(item.NOMBREPARTIDO ?? item.NombrePartido ?? ''),
+      siglas: String(item.SIGLAS ?? item.Siglas ?? ''),
+      logoPartido: String(item.LOGOPARTIDO ?? item.LogoPartido ?? ''),
+      color,
+      totalVotos: Number(item.TOTALVOTOS ?? item.TotalVotos ?? 0),
+      porcentaje: Number(item.PORCENTAJE ?? item.Porcentaje ?? 0),
+    },
+  };
+}
+
+function groupDistribucionTerritorial(items: DistribucionTerritorialApi[]): TerritorialGroup[] {
+  const map = new Map<string, TerritorialGroup>();
+
+  items.forEach((item) => {
+    const mapped = mapDistribucionItem(item);
+    const key = mapped.codigoUbicacion || mapped.nombreUbicacion;
+
+    if (!map.has(key)) {
+      map.set(key, {
+        nivel: mapped.nivel,
+        codigoUbicacion: mapped.codigoUbicacion,
+        nombreUbicacion: mapped.nombreUbicacion,
+        partidos: [],
+      });
+    }
+
+    map.get(key)?.partidos.push(mapped.partido);
+  });
+
+  return Array.from(map.values()).map((group) => ({
+    ...group,
+    partidos: group.partidos.sort((a, b) => b.totalVotos - a.totalVotos),
+  }));
+}
+
+function getNivelTerritorial(
+  codDepartamento: string,
+  codProvincia: string,
+  codDistrito: string,
+): 'DEPARTAMENTO' | 'PROVINCIA' | 'DISTRITO' {
+  if (codProvincia !== SELECT_TODOS || codDistrito !== SELECT_TODOS) return 'DISTRITO';
+  if (codDepartamento !== SELECT_TODOS) return 'PROVINCIA';
+
+  return 'DEPARTAMENTO';
+}
+
+function CustomChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{
+    value: number;
+    name: string;
+    color: string;
+    payload?: Partial<TimelineItem> & Record<string, any>;
+  }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+
+  const item = payload[0]?.payload;
+  const value = Number(payload[0]?.value ?? 0);
+
+  const votosGenerales = Number(item?.votos ?? value ?? 0);
+  const votosPartidos = Number(item?.votosPartidos ?? 0);
+  const actasRegistradas = Number(item?.actasRegistradas ?? 0);
+
+  const esLineaTiempo =
+    item &&
+    Object.prototype.hasOwnProperty.call(item, 'votosPartidos') &&
+    Object.prototype.hasOwnProperty.call(item, 'actasRegistradas');
+
+  return (
+    <div className="rounded-xl border border-orange-200 bg-white px-4 py-3 shadow-xl">
+      {label && (
+        <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-orange-500">
+          {label}
+        </p>
+      )}
+
+      <p className="text-sm font-black text-[#24130A]">
+        {votosGenerales.toLocaleString('es-PE')}
+        <span className="ml-1.5 text-[11px] font-semibold text-orange-400">
+          votos
+        </span>
+      </p>
+
+      {esLineaTiempo && (
+        <>
+          <p className="mt-1 text-[11px] font-bold text-orange-900/50">
+            Voto total de Partidos: {votosPartidos.toLocaleString('es-PE')}
+          </p>
+          <p className="text-[11px] font-bold text-orange-900/50">
+            Actas: {actasRegistradas.toLocaleString('es-PE')}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) {
   const [localFiltros, setLocalFiltros] = useState<FiltrosGenerales>(filtros);
   const [showFilters, setShowFilters] = useState(false);
-
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [liveCandidates, setLiveCandidates] = useState<CandidateDashboard[]>(MAIN_CANDIDATES);
+
+  const [liveCandidates, setLiveCandidates] = useState<CandidateDashboard[]>([]);
+  const [loadingResultadosPrincipales, setLoadingResultadosPrincipales] = useState(true);
+  const [errorResultadosPrincipales, setErrorResultadosPrincipales] = useState<string | null>(null);
+
+  const [liveTimeline, setLiveTimeline] = useState<TimelineItem[]>([]);
+  const [loadingLineaTiempo, setLoadingLineaTiempo] = useState(true);
+  const [errorLineaTiempo, setErrorLineaTiempo] = useState<string | null>(null);
+
+  const [departamentosApi, setDepartamentosApi] = useState<DepartamentoApi[]>([]);
+  const [provinciasApi, setProvinciasApi] = useState<ProvinciaApi[]>([]);
+  const [distritosApi, setDistritosApi] = useState<DistritoApi[]>([]);
+
+  const [codDepartamentoTerritorial, setCodDepartamentoTerritorial] = useState(SELECT_TODOS);
+  const [codProvinciaTerritorial, setCodProvinciaTerritorial] = useState(SELECT_TODOS);
+  const [codDistritoTerritorial, setCodDistritoTerritorial] = useState(SELECT_TODOS);
+
+  const [territorialData, setTerritorialData] = useState<TerritorialGroup[]>([]);
+  const [loadingTerritorial, setLoadingTerritorial] = useState(true);
+  const [errorTerritorial, setErrorTerritorial] = useState<string | null>(null);
+
   const [liveStats, setLiveStats] = useState<LiveStats>({
     actasValidadas: 82400,
     actasObservadas: 1800,
@@ -284,10 +537,295 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
     blancoNulo: 350000,
     activePersoneros: 128,
   });
-  const [liveTerritorialData, setLiveTerritorialData] = useState<TerritorialItem[]>(INITIAL_TERRITORIAL_DATA);
-  const [liveDepartmentVotes, setLiveDepartmentVotes] = useState<DepartmentVotes[]>(INITIAL_DEPARTMENT_VOTES);
-  const [liveTimeline, setLiveTimeline] = useState<TimelineItem[]>(INITIAL_TIMELINE);
-  const [liveActas, setLiveActas] = useState<LiveActaRow[]>(INITIAL_LIVE_ACTAS);
+
+  const [kpisGenerales, setKpisGenerales] = useState<KpisGenerales>(KPIS_GENERALES_INICIALES);
+  const [loadingKpisGenerales, setLoadingKpisGenerales] = useState(true);
+  const [errorKpisGenerales, setErrorKpisGenerales] = useState<string | null>(null);
+
+  const [liveDepartmentVotes, setLiveDepartmentVotes] =
+    useState<DepartmentVotes[]>(INITIAL_DEPARTMENT_VOTES);
+
+  const [liveActas, setLiveActas] =
+    useState<LiveActaRow[]>(INITIAL_LIVE_ACTAS);
+
+  const cargarKpisGenerales = useCallback(async () => {
+    try {
+      setErrorKpisGenerales(null);
+
+      const response = await apiService.listarKpis();
+
+      console.log('KPIS GENERALES:', response);
+
+      if (response?.CodigoRespuesta !== '01') {
+        setKpisGenerales(KPIS_GENERALES_INICIALES);
+        setErrorKpisGenerales(
+          response?.TXTRESPUESTA ?? 'No se pudieron cargar los KPIs generales',
+        );
+        return;
+      }
+
+      const datos = response?.Datos ?? {};
+
+      setKpisGenerales({
+        TOTALACTAS: Number(datos?.TOTALACTAS ?? 0),
+        ACTASVALIDADAS: Number(datos?.ACTASVALIDADAS ?? 0),
+        ACTASOBSERVADAS: Number(datos?.ACTASOBSERVADAS ?? 0),
+        ACTASPENDIENTES: Number(datos?.ACTASPENDIENTES ?? 0),
+        PERSONEROSACTIVOS: Number(datos?.PERSONEROSACTIVOS ?? 0),
+        TOTALVOTOSPARTIDOS: Number(datos?.TOTALVOTOSPARTIDOS ?? 0),
+        TOTALVOTOSESPECIALES: Number(datos?.TOTALVOTOSESPECIALES ?? 0),
+        VOTOSBLANCOS: Number(datos?.VOTOSBLANCOS ?? 0),
+        VOTOSNULOS: Number(datos?.VOTOSNULOS ?? 0),
+        VOTOSIMPUGNADOS: Number(datos?.VOTOSIMPUGNADOS ?? 0),
+        TOTALVOTOSGENERAL: Number(datos?.TOTALVOTOSGENERAL ?? 0),
+        DIFERENCIAPRIMERSEGUNDO: Number(datos?.DIFERENCIAPRIMERSEGUNDO ?? 0),
+        PORCENTAJEMARGEN: Number(datos?.PORCENTAJEMARGEN ?? 0),
+        PARTICIPACION: Number(datos?.PARTICIPACION ?? 0),
+        AVANCEGENERAL: Number(datos?.AVANCEGENERAL ?? 0),
+      });
+
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('ERROR KPIS GENERALES:', error);
+      setKpisGenerales(KPIS_GENERALES_INICIALES);
+      setErrorKpisGenerales('Error al conectar con el servidor');
+    } finally {
+      setLoadingKpisGenerales(false);
+    }
+  }, []);
+
+  const cargarResultadosPrincipales = useCallback(async () => {
+    try {
+      setErrorResultadosPrincipales(null);
+
+      const response = await apiService.obtenerResultadosPrincipales();
+
+      console.log('RESULTADOS PRINCIPALES:', response);
+
+      if (response?.CodigoRespuesta !== '01') {
+        setLiveCandidates([]);
+        setErrorResultadosPrincipales(
+          response?.TXTRESPUESTA ?? 'No se pudieron cargar los resultados principales',
+        );
+        return;
+      }
+
+      const datos = Array.isArray(response?.Datos) ? response.Datos : [];
+
+      const candidatos = datos
+        .map((item: any, index: number) => mapResultadoPrincipalToCandidate(item, index))
+        .sort((a: CandidateDashboard, b: CandidateDashboard) => a.idPartido - b.idPartido);
+
+      setLiveCandidates(candidatos);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('ERROR RESULTADOS PRINCIPALES:', error);
+      setLiveCandidates([]);
+      setErrorResultadosPrincipales('Error al conectar con el servidor');
+    } finally {
+      setLoadingResultadosPrincipales(false);
+    }
+  }, []);
+
+  const cargarLineaTiempo = useCallback(async () => {
+    try {
+      setErrorLineaTiempo(null);
+
+      const response = await apiService.obtenerLineaTiempo();
+
+      console.log('LINEA TIEMPO:', response);
+
+      if (response?.CodigoRespuesta !== '01') {
+        setLiveTimeline([]);
+        setErrorLineaTiempo(
+          response?.TXTRESPUESTA ?? 'No se pudo cargar la línea de tiempo',
+        );
+        return;
+      }
+
+      const datos = Array.isArray(response?.Datos) ? response.Datos : [];
+
+      const timeline = datos.map((item: any) => mapLineaTiempoItem(item));
+
+      setLiveTimeline(timeline);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('ERROR LINEA TIEMPO:', error);
+      setLiveTimeline([]);
+      setErrorLineaTiempo('Error al conectar con el servidor');
+    } finally {
+      setLoadingLineaTiempo(false);
+    }
+  }, []);
+
+  const cargarDepartamentos = useCallback(async () => {
+    try {
+      const response = await apiService.ListarDepartamento(true);
+
+      console.log('DEPARTAMENTOS:', response);
+
+      if (response?.CodigoRespuesta !== '01') {
+        setDepartamentosApi([]);
+        return;
+      }
+
+      setDepartamentosApi(Array.isArray(response?.Datos) ? response.Datos : []);
+    } catch (error) {
+      console.error('ERROR DEPARTAMENTOS:', error);
+      setDepartamentosApi([]);
+    }
+  }, []);
+
+  const cargarProvincias = useCallback(async (codDepartamento: string) => {
+    if (codDepartamento === SELECT_TODOS) {
+      setProvinciasApi([]);
+      return;
+    }
+
+    try {
+      const response = await apiService.ListarProvincia(codDepartamento, true);
+
+      console.log('PROVINCIAS:', response);
+
+      if (response?.CodigoRespuesta !== '01') {
+        setProvinciasApi([]);
+        return;
+      }
+
+      setProvinciasApi(Array.isArray(response?.Datos) ? response.Datos : []);
+    } catch (error) {
+      console.error('ERROR PROVINCIAS:', error);
+      setProvinciasApi([]);
+    }
+  }, []);
+
+  const cargarDistritos = useCallback(async (codDepartamento: string, codProvincia: string) => {
+    if (codDepartamento === SELECT_TODOS || codProvincia === SELECT_TODOS) {
+      setDistritosApi([]);
+      return;
+    }
+
+    try {
+      const response = await apiService.ListarDistrito(codDepartamento, codProvincia, true);
+
+      console.log('DISTRITOS:', response);
+
+      if (response?.CodigoRespuesta !== '01') {
+        setDistritosApi([]);
+        return;
+      }
+
+      setDistritosApi(Array.isArray(response?.Datos) ? response.Datos : []);
+    } catch (error) {
+      console.error('ERROR DISTRITOS:', error);
+      setDistritosApi([]);
+    }
+  }, []);
+
+  const cargarDistribucionTerritorial = useCallback(async () => {
+    try {
+      setLoadingTerritorial(true);
+      setErrorTerritorial(null);
+
+      const nivel = getNivelTerritorial(
+        codDepartamentoTerritorial,
+        codProvinciaTerritorial,
+        codDistritoTerritorial,
+      );
+
+      const response = await apiService.DistribucionTerritorial(
+        nivel,
+        codDepartamentoTerritorial === SELECT_TODOS ? undefined : codDepartamentoTerritorial,
+        codProvinciaTerritorial === SELECT_TODOS ? undefined : codProvinciaTerritorial,
+        codDistritoTerritorial === SELECT_TODOS ? undefined : codDistritoTerritorial,
+        localFiltros.fechaInicio || undefined,
+        localFiltros.fechaFin || undefined,
+      );
+
+      console.log('DISTRIBUCION TERRITORIAL:', response);
+
+      if (response?.CodigoRespuesta !== '01') {
+        setTerritorialData([]);
+        setErrorTerritorial(response?.TXTRESPUESTA ?? 'No se pudo cargar la distribución territorial');
+        return;
+      }
+
+      const datos = Array.isArray(response?.Datos) ? response.Datos : [];
+
+      setTerritorialData(groupDistribucionTerritorial(datos));
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('ERROR DISTRIBUCION TERRITORIAL:', error);
+      setTerritorialData([]);
+      setErrorTerritorial('Error al conectar con el servidor');
+    } finally {
+      setLoadingTerritorial(false);
+    }
+  }, [
+    codDepartamentoTerritorial,
+    codProvinciaTerritorial,
+    codDistritoTerritorial,
+    localFiltros.fechaInicio,
+    localFiltros.fechaFin,
+  ]);
+
+  useEffect(() => {
+    cargarDepartamentos();
+    cargarKpisGenerales();
+    cargarResultadosPrincipales();
+    cargarLineaTiempo();
+  }, [cargarDepartamentos, cargarKpisGenerales, cargarResultadosPrincipales, cargarLineaTiempo]);
+
+  useEffect(() => {
+    cargarDistribucionTerritorial();
+  }, [cargarDistribucionTerritorial]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      cargarKpisGenerales();
+      cargarResultadosPrincipales();
+      cargarLineaTiempo();
+      cargarDistribucionTerritorial();
+    }, 5000);
+
+    return () => window.clearInterval(interval);
+  }, [cargarKpisGenerales, cargarResultadosPrincipales, cargarLineaTiempo, cargarDistribucionTerritorial]);
+
+  const handleDepartamentoTerritorialChange = (value: string) => {
+    setCodDepartamentoTerritorial(value);
+    setCodProvinciaTerritorial(SELECT_TODOS);
+    setCodDistritoTerritorial(SELECT_TODOS);
+    setDistritosApi([]);
+
+    if (value !== SELECT_TODOS) {
+      cargarProvincias(value);
+    } else {
+      setProvinciasApi([]);
+    }
+  };
+
+  const handleProvinciaTerritorialChange = (value: string) => {
+    setCodProvinciaTerritorial(value);
+    setCodDistritoTerritorial(SELECT_TODOS);
+
+    if (value !== SELECT_TODOS) {
+      cargarDistritos(codDepartamentoTerritorial, value);
+    } else {
+      setDistritosApi([]);
+    }
+  };
+
+  const handleDistritoTerritorialChange = (value: string) => {
+    setCodDistritoTerritorial(value);
+  };
+
+  const limpiarFiltrosTerritoriales = () => {
+    setCodDepartamentoTerritorial(SELECT_TODOS);
+    setCodProvinciaTerritorial(SELECT_TODOS);
+    setCodDistritoTerritorial(SELECT_TODOS);
+    setProvinciasApi([]);
+    setDistritosApi([]);
+  };
 
   const updateFiltro = (key: keyof FiltrosGenerales, value: string) => {
     const next = { ...localFiltros, [key]: value };
@@ -323,84 +861,27 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      setLastUpdate(new Date());
-
-      setLiveCandidates((prev) =>
-        prev.map((candidate) => {
-          const voteIncrement = candidate.id === 'keiko'
-            ? randomInt(60, 180)
-            : randomInt(45, 165);
-
-          const progressIncrement = candidate.id === 'keiko'
-            ? randomFloat(0.02, 0.08)
-            : randomFloat(0.01, 0.06);
-
-          return {
-            ...candidate,
-            votes: candidate.votes + voteIncrement,
-            progress: Math.min(98, Number((candidate.progress + progressIncrement).toFixed(2))),
-          };
-        }),
-      );
-
       setLiveStats((prev) => {
-        const nuevasActas = randomInt(6, 18);
-        const nuevasValidadas = randomInt(4, nuevasActas);
-        const nuevasObservadas = randomInt(0, 2);
-        const nuevasPendientes = Math.max(0, nuevasActas - nuevasValidadas - nuevasObservadas);
+        const n = randomInt(6, 18);
+        const v = randomInt(4, n);
+        const o = randomInt(0, 2);
+        const p = Math.max(0, n - v - o);
 
         return {
           ...prev,
-          actasValidadas: prev.actasValidadas + nuevasValidadas,
-          actasObservadas: prev.actasObservadas + nuevasObservadas,
-          actasPendientes: prev.actasPendientes + nuevasPendientes,
-          mesasRegistradas: prev.mesasRegistradas + nuevasActas,
-          mesasPendientes: Math.max(0, prev.mesasPendientes - nuevasActas),
+          actasValidadas: prev.actasValidadas + v,
+          actasObservadas: prev.actasObservadas + o,
+          actasPendientes: prev.actasPendientes + p,
+          mesasRegistradas: prev.mesasRegistradas + n,
+          mesasPendientes: Math.max(0, prev.mesasPendientes - n),
           blancoNulo: prev.blancoNulo + randomInt(5, 18),
           activePersoneros: prev.activePersoneros + randomInt(0, 1),
         };
       });
 
-      setLiveTerritorialData((prev) =>
-        prev.map((item) => {
-          const fpIncrement = randomFloat(0.02, 0.12);
-          const ppIncrement = randomFloat(0.01, 0.07);
-
-          return {
-            ...item,
-            fuerzaPopular: Math.min(85, Number((item.fuerzaPopular + fpIncrement).toFixed(1))),
-            partidoDelPueblo: Math.min(75, Number((item.partidoDelPueblo + ppIncrement).toFixed(1))),
-          };
-        }),
-      );
-
       setLiveDepartmentVotes((prev) =>
-        prev.map((item) => ({
-          ...item,
-          votos: item.votos + randomInt(180, 850),
-        })),
+        prev.map((item) => ({ ...item, votos: item.votos + randomInt(180, 850) })),
       );
-
-      setLiveTimeline((prev) => {
-        const next = [...prev];
-        const lastIndex = next.length - 1;
-
-        next[lastIndex] = {
-          ...next[lastIndex],
-          votos: next[lastIndex].votos + randomInt(1500, 4200),
-        };
-
-        if (next.length >= 2) {
-          const previousIndex = next.length - 2;
-
-          next[previousIndex] = {
-            ...next[previousIndex],
-            votos: next[previousIndex].votos + randomInt(400, 1200),
-          };
-        }
-
-        return next;
-      });
 
       setLiveActas((prev) => {
         const newRow = createLiveActaRow();
@@ -424,11 +905,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
       if (localFiltros.distrito && a.distrito !== localFiltros.distrito) return false;
 
       if (localFiltros.partidoPolitico) {
-        const hasParty = a.votosPorPartido.some(
-          (vp) => vp.partidoId === localFiltros.partidoPolitico,
-        );
-
-        if (!hasParty) return false;
+        if (!a.votosPorPartido.some((vp) => vp.partidoId === localFiltros.partidoPolitico)) return false;
       }
 
       if (localFiltros.fechaInicio && a.fechaRegistro < localFiltros.fechaInicio) return false;
@@ -439,54 +916,37 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
     });
   }, [localFiltros]);
 
-  const filteredMesas = useMemo(() => {
-    return mesasMock.filter((m) => {
-      if (localFiltros.departamento && m.departamento !== localFiltros.departamento) return false;
-      if (localFiltros.provincia && m.provincia !== localFiltros.provincia) return false;
-      if (localFiltros.distrito && m.distrito !== localFiltros.distrito) return false;
-      if (localFiltros.numeroMesa && !m.numeroMesa.includes(localFiltros.numeroMesa)) return false;
-
-      return true;
-    });
-  }, [localFiltros]);
-
-  const filteredPersoneros = useMemo(() => {
-    return personerosMock.filter((p) => {
-      if (localFiltros.departamento && p.departamento !== localFiltros.departamento) return false;
-      if (localFiltros.provincia && p.provincia !== localFiltros.provincia) return false;
-
-      return true;
-    });
-  }, [localFiltros]);
-
-  const { votosPorPartido, totalGeneral, totalNulos, totalBlanco } = useMemo(
+  const { totalNulos, totalBlanco } = useMemo(
     () => calcularVotosTotales(filteredActas),
     [filteredActas],
   );
 
-  const porcentajes = useMemo(
-    () => calcularPorcentajes(votosPorPartido, totalGeneral),
-    [votosPorPartido, totalGeneral],
-  );
-
   const totalMesas = liveStats.mesasRegistradas + liveStats.mesasPendientes;
-  const avance = totalMesas > 0
-    ? Math.min(100, Number(((liveStats.mesasRegistradas / totalMesas) * 100).toFixed(2)))
-    : 0;
+
+  const avance =
+    totalMesas > 0
+      ? Math.min(100, Number(((liveStats.mesasRegistradas / totalMesas) * 100).toFixed(2)))
+      : 0;
 
   const firstCandidate = liveCandidates[0];
   const secondCandidate = liveCandidates[1];
 
-  const totalMainVotes = firstCandidate.votes + secondCandidate.votes;
-  const diferencia = Math.abs(firstCandidate.votes - secondCandidate.votes);
+  const totalMainVotes = liveCandidates.reduce((sum, candidate) => sum + candidate.votes, 0);
 
-  const margen = totalMainVotes > 0
-    ? ((diferencia / totalMainVotes) * 100).toFixed(2)
-    : '0.00';
+  const diferencia =
+    firstCandidate && secondCandidate
+      ? Math.abs(firstCandidate.votes - secondCandidate.votes)
+      : 0;
 
-  const participacion = totalMesas > 0
-    ? Math.min(100, Math.round((liveStats.mesasRegistradas / totalMesas) * 100))
-    : 0;
+  const margen =
+    totalMainVotes > 0
+      ? ((diferencia / totalMainVotes) * 100).toFixed(2)
+      : '0.00';
+
+  const participacion =
+    totalMesas > 0
+      ? Math.min(100, Math.round((liveStats.mesasRegistradas / totalMesas) * 100))
+      : 0;
 
   const availableProvincias = localFiltros.departamento
     ? PROVINCIAS_POR_DEPARTAMENTO[localFiltros.departamento] || []
@@ -498,12 +958,10 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
 
   const hasFilters = Object.values(localFiltros).some((v) => v !== '');
 
-  const barConfig = useMemo(() => ({
-    votos: {
-      label: 'Votos',
-      color: PRIMARY,
-    },
-  }), []);
+  const hasTerritorialFilters =
+    codDepartamentoTerritorial !== SELECT_TODOS ||
+    codProvinciaTerritorial !== SELECT_TODOS ||
+    codDistritoTerritorial !== SELECT_TODOS;
 
   const lastUpdateText = useMemo(() => {
     return lastUpdate.toLocaleTimeString('es-PE', {
@@ -514,29 +972,34 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
     });
   }, [lastUpdate]);
 
+  const formatNumber = (value: number) => value.toLocaleString('es-PE');
+
+  const totalActasKpi = kpisGenerales.TOTALACTAS;
+  const totalVotosEspecialesKpi = kpisGenerales.TOTALVOTOSESPECIALES;
+  const totalVotosGeneralKpi = kpisGenerales.TOTALVOTOSGENERAL;
+  const diferenciaPrimerSegundoKpi = kpisGenerales.DIFERENCIAPRIMERSEGUNDO;
+
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'validada':
         return (
-          <Badge className="border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 hover:bg-emerald-50">
-            <CheckCircle2 className="mr-1 h-3 w-3" />
-            Contabilizada
+          <Badge className="border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 hover:bg-emerald-50">
+            <CheckCircle2 className="mr-1 h-3 w-3" /> Contabilizada
           </Badge>
         );
 
       case 'observada':
         return (
-          <Badge className="border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700 hover:bg-red-50">
-            <AlertTriangle className="mr-1 h-3 w-3" />
-            Observada
+          <Badge className="border-red-200 bg-red-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-700 hover:bg-red-50">
+            <AlertTriangle className="mr-1 h-3 w-3" /> Observada
           </Badge>
         );
 
       case 'pendiente':
         return (
-          <Badge className="border-orange-200 bg-orange-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-700 hover:bg-orange-50">
-            <Hourglass className="mr-1 h-3 w-3" />
-            En proceso
+          <Badge className="border-orange-200 bg-orange-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-700 hover:bg-orange-50">
+            <Hourglass className="mr-1 h-3 w-3" /> En proceso
           </Badge>
         );
 
@@ -549,19 +1012,23 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
     }
   };
 
-  const formatNumber = (value: number) => {
-    return value.toLocaleString('es-PE');
-  };
-
   return (
     <div
-      className="min-h-screen w-full bg-[#FFF7ED] px-4 py-4 text-[#24130A] sm:px-6 lg:px-8"
+      className="min-h-screen w-full bg-[#FFFBF7] text-[#24130A]"
       style={{
         fontFamily:
           'Inter, Manrope, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
       }}
     >
-      <div className="mx-auto w-full max-w-[1480px] space-y-5">
+      <div
+        className="pointer-events-none fixed inset-0 opacity-[0.025]"
+        style={{
+          backgroundImage: 'radial-gradient(circle at 1px 1px, #9A3412 1px, transparent 0)',
+          backgroundSize: '28px 28px',
+        }}
+      />
+
+      <div className="relative mx-auto w-full max-w-[1480px] space-y-6 px-4 py-5 sm:px-6 lg:px-8">
         <motion.div
           initial="hidden"
           animate="visible"
@@ -572,13 +1039,13 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
             <h1 className="text-2xl font-black tracking-tight text-[#24130A] sm:text-3xl">
               Dashboard Electoral
             </h1>
-            <p className="mt-1 text-sm font-medium text-orange-900/60">
+            <p className="mt-1 text-sm font-medium text-orange-900/50">
               Seguimiento general de actas, mesas, votos y actividad operativa.
             </p>
           </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-orange-700 shadow-sm">
+            <div className="flex items-center justify-center gap-2 rounded-xl border border-orange-200 bg-white px-4 py-2.5 text-[11px] font-black uppercase tracking-[0.16em] text-orange-700 shadow-sm backdrop-blur-sm">
               <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
               <Radio className="h-3.5 w-3.5" />
               En línea
@@ -595,7 +1062,11 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
             >
               <Filter className="mr-1.5 h-4 w-4" />
               Filtros
-              <ChevronDown className={`ml-1 h-3.5 w-3.5 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`ml-1 h-3.5 w-3.5 transition-transform ${
+                  showFilters ? 'rotate-180' : ''
+                }`}
+              />
             </Button>
           </div>
         </motion.div>
@@ -608,7 +1079,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
               exit={{ opacity: 0, height: 0, y: -8 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             >
-              <Card className="rounded-2xl border border-orange-200 bg-white shadow-sm">
+              <Card className="rounded-2xl border border-orange-200/80 bg-white/90 shadow-sm backdrop-blur-sm">
                 <CardContent className="p-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                     <Select
@@ -687,14 +1158,14 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                       type="date"
                       value={localFiltros.fechaInicio}
                       onChange={(e) => updateFiltro('fechaInicio', e.target.value)}
-                      className="rounded-xl border-orange-200 bg-white text-xs"
+                      className="rounded-xl border-orange-200 bg-orange-50/80 text-xs backdrop-blur-sm"
                     />
 
                     <Input
                       type="date"
                       value={localFiltros.fechaFin}
                       onChange={(e) => updateFiltro('fechaFin', e.target.value)}
-                      className="rounded-xl border-orange-200 bg-white text-xs"
+                      className="rounded-xl border-orange-200 bg-orange-50/80 text-xs backdrop-blur-sm"
                     />
 
                     <div className="relative">
@@ -703,7 +1174,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                         value={localFiltros.numeroMesa}
                         onChange={(e) => updateFiltro('numeroMesa', e.target.value)}
                         placeholder="N° mesa"
-                        className="rounded-xl border-orange-200 bg-white pl-8 text-xs"
+                        className="rounded-xl border-orange-200 bg-orange-50/80 pl-8 text-xs backdrop-blur-sm"
                       />
                     </div>
                   </div>
@@ -727,156 +1198,98 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
           )}
         </AnimatePresence>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
-          <div className="space-y-5 xl:col-span-7">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-              <motion.div
-                custom={0}
-                initial="hidden"
-                animate="visible"
-                variants={cardVariants}
-                className="md:col-span-2"
-              >
-                <Card className="relative overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-[#F97316] via-[#EA580C] to-[#9A3412] shadow-sm">
-                  <CardContent className="relative p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/75">
-                        Avance general
-                      </div>
+        <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
+          <Card className="overflow-hidden rounded-3xl border border-orange-100 shadow-xl shadow-orange-200/40">
+            <div className="relative bg-gradient-to-br from-orange-50 via-white to-orange-100/50">
+              <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <div className="absolute -right-20 -top-20 h-80 w-80 rounded-full bg-orange-200/30 blur-3xl" />
+                <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-orange-100/40 blur-3xl" />
+                <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-orange-100/30 blur-2xl" />
+              </div>
 
-                      <div className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold text-white">
-                        <RollingNumber value={formatNumber(totalMesas)} /> mesas
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex items-end gap-3">
-                      <RollingNumber
-                        value={`${avance.toFixed(2)}%`}
-                        className="text-5xl font-black leading-none tracking-tight text-white"
-                      />
-                      <TrendingUp className="mb-2 h-5 w-5 text-orange-100" />
-                    </div>
-
-                    <p className="mt-2 text-xs font-medium text-white/75">
-                      Actas procesadas frente al total de mesas registradas.
-                    </p>
-
-                    <div className="mt-6 h-2 overflow-hidden rounded-full bg-white/25">
-                      <motion.div
-                        initial={false}
-                        animate={{ width: `${avance}%` }}
-                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                        className="h-full rounded-full bg-white"
-                      />
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between text-[11px] font-bold text-white/75">
-                      <span>
-                        <RollingNumber value={formatNumber(liveStats.mesasRegistradas)} /> procesadas
-                      </span>
-                      <span>
-                        <RollingNumber value={formatNumber(liveStats.mesasPendientes)} /> pendientes
-                      </span>
-                    </div>
-
-                    <div className="absolute -bottom-10 -right-8 h-32 w-32 rounded-full bg-white/10" />
-                    <div className="absolute -right-5 top-8 h-16 w-16 rounded-full bg-white/10" />
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              <motion.div custom={1} initial="hidden" animate="visible" variants={cardVariants}>
-                <Card className="h-full overflow-visible rounded-2xl border border-orange-100 bg-white shadow-sm">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
-                        <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-900/35">
-                        Correctas
-                      </span>
-                    </div>
-
-                    <div className="mt-5 text-xs font-bold uppercase tracking-[0.12em] text-orange-900/50">
-                      Actas validadas
-                    </div>
-
-                    <RollingNumber
-                      value={formatNumber(liveStats.actasValidadas)}
-                      className={`mt-2 block text-[2rem] ${numberClass} text-[#24130A] sm:text-3xl`}
-                    />
-
-                    <div className="mt-3 flex items-center gap-1 text-xs font-bold text-emerald-600">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                      Sincronizadas
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-
-              <motion.div custom={2} initial="hidden" animate="visible" variants={cardVariants}>
-                <Card className="h-full overflow-visible rounded-2xl border border-orange-100 bg-white shadow-sm">
-                  <CardContent className="p-5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50">
-                        <AlertTriangle className="h-5 w-5 text-red-600" />
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-900/35">
-                        Revisión
-                      </span>
-                    </div>
-
-                    <div className="mt-5 text-xs font-bold uppercase tracking-[0.12em] text-orange-900/50">
-                      Actas observadas
-                    </div>
-
-                    <RollingNumber
-                      value={formatNumber(liveStats.actasObservadas)}
-                      className={`mt-2 block text-[2rem] ${numberClass} text-[#24130A] sm:text-3xl`}
-                    />
-
-                    <div className="mt-3 flex items-center gap-1 text-xs font-bold text-red-600">
-                      <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                      Pendientes de control
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            </div>
-
-            <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
-              <Card className="rounded-3xl border border-orange-100 bg-white shadow-sm">
-                <CardContent className="p-5 sm:p-6">
-                  <div className="mb-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h2 className="text-xl font-black tracking-tight text-[#24130A]">
-                        Resultados principales
+              <div className="relative p-5 sm:p-7 lg:p-9">
+                <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-2xl font-black tracking-tight text-[#24130A] sm:text-3xl lg:text-4xl">
+                        Resultados Principales
                       </h2>
-                      <p className="mt-1 text-xs font-medium text-orange-900/50">
-                        Simulación de incremento de votos cada 5 segundos.
-                      </p>
                     </div>
-
-                    <Badge className="w-fit rounded-full bg-orange-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-orange-700 hover:bg-orange-50">
-                      Resumen en vivo
-                    </Badge>
+                    <p className="mt-1.5 text-sm font-medium text-orange-900/50">
+                      Escrutinio en vivo con datos actualizados desde el servidor
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-                    {liveCandidates.map((candidate) => (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        cargarKpisGenerales();
+                        cargarResultadosPrincipales();
+                        cargarLineaTiempo();
+                        cargarDistribucionTerritorial();
+                      }}
+                      className="rounded-full border-orange-200 bg-white text-[10px] font-black uppercase tracking-[0.12em] text-orange-700 hover:bg-orange-50"
+                    >
+                      <RefreshCcw className="mr-1.5 h-3.5 w-3.5" />
+                      Actualizar
+                    </Button>
+
+                    <Badge className="w-fit rounded-full border border-orange-200 bg-orange-100 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-orange-700 backdrop-blur-sm hover:bg-orange-100">
+                      <span className="mr-2 inline-block h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+                      En vivo
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="relative grid grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+                  {liveCandidates.length >= 2 && (
+                    <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 lg:flex">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full border border-orange-200 bg-gradient-to-br from-orange-500 to-orange-600 text-base font-black text-white shadow-lg shadow-orange-300/50">
+                        VS
+                      </div>
+                    </div>
+                  )}
+
+                  {loadingResultadosPrincipales ? (
+                    <div className="col-span-1 rounded-2xl border border-orange-100 bg-white/80 p-6 text-center shadow-sm backdrop-blur-sm lg:col-span-2">
+                      <p className="text-sm font-bold text-orange-700">
+                        Cargando resultados principales...
+                      </p>
+                    </div>
+                  ) : errorResultadosPrincipales ? (
+                    <div className="col-span-1 rounded-2xl border border-red-100 bg-red-50 p-6 text-center shadow-sm lg:col-span-2">
+                      <p className="text-sm font-bold text-red-700">
+                        {errorResultadosPrincipales}
+                      </p>
+                    </div>
+                  ) : liveCandidates.length === 0 ? (
+                    <div className="col-span-1 rounded-2xl border border-orange-100 bg-white/80 p-6 text-center shadow-sm backdrop-blur-sm lg:col-span-2">
+                      <p className="text-sm font-bold text-orange-700">
+                        No hay resultados principales disponibles
+                      </p>
+                    </div>
+                  ) : (
+                    liveCandidates.map((candidate) => (
                       <div
                         key={candidate.id}
-                        className="relative overflow-hidden rounded-3xl border border-orange-100 bg-white p-4 shadow-sm"
+                        className="relative overflow-hidden rounded-2xl border border-orange-100 bg-white/80 p-5 shadow-sm backdrop-blur-sm sm:p-6"
                       >
                         <div
-                          className="absolute inset-x-0 top-0 h-1.5"
+                          className="absolute inset-x-0 top-0 h-1"
                           style={{ backgroundColor: candidate.color }}
                         />
 
-                        <div className="flex items-start gap-4">
+                        <div
+                          className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full blur-2xl"
+                          style={{ backgroundColor: candidate.color, opacity: 0.08 }}
+                        />
+
+                        <div className="relative flex items-start gap-4">
                           <div className="relative shrink-0">
                             <div
-                              className="h-[72px] w-[72px] overflow-hidden rounded-2xl border-4 bg-white shadow-sm"
+                              className="h-[76px] w-[76px] overflow-hidden rounded-2xl border-[3px] bg-white shadow-lg sm:h-[84px] sm:w-[84px]"
                               style={{ borderColor: candidate.color }}
                             >
                               <img
@@ -886,510 +1299,409 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                               />
                             </div>
 
-                            <div className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white shadow-md">
+                            <div className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-white shadow-md">
                               <img
                                 src={candidate.logo}
                                 alt={candidate.partyName}
-                                className="h-full w-full object-contain p-0.5"
+                                className="h-full w-full object-contain p-1"
                               />
                             </div>
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-xl font-black leading-tight text-[#24130A]">
+                            <h3 className="truncate text-xl font-black leading-tight text-[#24130A] sm:text-2xl">
                               {candidate.displayName}
-                            </div>
+                            </h3>
 
-                            <div className="mt-1 flex flex-wrap items-center gap-2">
-                              <span
-                                className="rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em]"
-                                style={{
-                                  backgroundColor: candidate.accent,
-                                  color: candidate.color,
-                                }}
-                              >
-                                {candidate.partyName}
-                              </span>
-
-                              <span className="text-[10px] font-bold text-orange-900/40">
-                                Barra al <RollingNumber value={`${candidate.progress.toFixed(1)}%`} />
-                              </span>
-                            </div>
+                            <span
+                              className="mt-1.5 inline-block rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em]"
+                              style={{
+                                backgroundColor: `${candidate.color}18`,
+                                color: candidate.darkColor,
+                              }}
+                            >
+                              {candidate.partyName}
+                            </span>
                           </div>
                         </div>
 
-                        <div className="mt-6 flex items-end justify-between gap-3">
+                        <div className="mt-6 flex items-end gap-2">
                           <RollingNumber
                             value={formatNumber(candidate.votes)}
-                            className="text-4xl font-black tracking-tight"
+                            className="text-4xl font-black tracking-tight sm:text-5xl lg:text-[3.4rem]"
                             style={{ color: candidate.color }}
                           />
-
-                          <div className="pb-1 text-xs font-black uppercase tracking-[0.12em] text-orange-900/45">
-                            Votos
-                          </div>
+                          <span className="mb-1 text-[11px] font-bold uppercase tracking-[0.14em] text-orange-900/40">
+                            votos
+                          </span>
                         </div>
 
-                        <div className="mt-4 h-3 overflow-hidden rounded-full bg-orange-100">
+                        <div className="mt-5 h-3.5 overflow-hidden rounded-full bg-orange-100">
                           <motion.div
                             initial={false}
-                            animate={{ width: `${candidate.progress}%` }}
+                            animate={{ width: `${Math.min(100, candidate.progress)}%` }}
                             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                             className="h-full rounded-full"
-                            style={{ backgroundColor: candidate.color }}
+                            style={{
+                              backgroundColor: candidate.color,
+                              boxShadow: `0 0 12px ${candidate.color}40`,
+                            }}
                           />
                         </div>
-                      </div>
-                    ))}
-                  </div>
 
-                  <div className="my-7 border-t border-orange-100" />
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="rounded-2xl bg-orange-50 p-4 text-center">
-                      <div className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-800/70">
-                        Diferencia
-                      </div>
-                      <RollingNumber
-                        value={formatNumber(diferencia)}
-                        className="mt-1 block text-2xl font-black text-[#24130A]"
-                      />
-                      <div className="text-[10px] font-bold text-orange-900/40">
-                        <RollingNumber value={`${margen}%`} /> de margen
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl bg-orange-50 p-4 text-center">
-                      <div className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-800/70">
-                        Blanco / nulo
-                      </div>
-                      <RollingNumber
-                        value={formatNumber(liveStats.blancoNulo + totalBlanco + totalNulos)}
-                        className="mt-1 block text-2xl font-black text-[#24130A]"
-                      />
-                      <div className="text-[10px] font-bold text-orange-900/40">
-                        Votos especiales
-                      </div>
-                    </div>
-
-                    <div className="rounded-2xl bg-orange-50 p-4 text-center">
-                      <div className="text-[10px] font-black uppercase tracking-[0.14em] text-orange-800/70">
-                        Participación
-                      </div>
-                      <RollingNumber
-                        value={`${participacion}%`}
-                        className="mt-1 block text-2xl font-black text-[#24130A]"
-                      />
-                      <div className="text-[10px] font-bold text-orange-900/40">
-                        Sobre mesas procesadas
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </div>
-
-          <div className="space-y-5 xl:col-span-5">
-            <motion.div custom={3} initial="hidden" animate="visible" variants={cardVariants}>
-              <Card className="rounded-2xl border border-orange-100 bg-white shadow-sm">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs font-black uppercase tracking-[0.14em] text-orange-900/55">
-                      Estado de mesas
-                    </div>
-                    <ShieldCheck className="h-5 w-5 text-orange-600" />
-                  </div>
-
-                  <div className="mt-5 space-y-4">
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-                      <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-[#24130A]">
-                        <span className="h-2 w-2 shrink-0 rounded-full bg-orange-600" />
-                        <span className="truncate">Registradas</span>
-                      </div>
-                      <RollingNumber
-                        value={formatNumber(liveStats.mesasRegistradas)}
-                        className={`shrink-0 text-lg ${numberClass} text-[#24130A]`}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-                      <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-orange-900/55">
-                        <span className="h-2 w-2 shrink-0 rounded-full bg-orange-200" />
-                        <span className="truncate">Pendientes</span>
-                      </div>
-                      <RollingNumber
-                        value={formatNumber(liveStats.mesasPendientes)}
-                        className={`shrink-0 text-lg ${numberClass} text-[#24130A]`}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4">
-                      <div className="flex min-w-0 items-center gap-2 text-sm font-bold text-orange-900/55">
-                        <span className="h-2 w-2 shrink-0 rounded-full bg-orange-400" />
-                        <span className="truncate">Actas en proceso</span>
-                      </div>
-                      <RollingNumber
-                        value={formatNumber(liveStats.actasPendientes)}
-                        className={`shrink-0 text-lg ${numberClass} text-[#24130A]`}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="my-5 border-t border-orange-100" />
-
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-orange-900/45">
-                      Personeros activos
-                    </span>
-                    <RollingNumber
-                      value={formatNumber(liveStats.activePersoneros)}
-                      className={`shrink-0 ${numberClass} text-orange-700`}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
-              <Card className="rounded-2xl border border-orange-100 bg-white shadow-sm">
-                <CardContent className="p-5">
-                  <div className="mb-5 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg font-black text-[#24130A]">
-                        Distribución territorial
-                      </h2>
-                      <p className="mt-1 text-xs font-medium text-orange-900/50">
-                        Comparativo territorial por partido.
-                      </p>
-                    </div>
-                    <MapPin className="h-5 w-5 text-orange-600" />
-                  </div>
-
-                  <div className="mb-5 grid grid-cols-2 gap-3">
-                    {liveCandidates.map((candidate) => (
-                      <div
-                        key={candidate.id}
-                        className="rounded-2xl border border-orange-100 bg-orange-50/50 p-3"
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
-                            <img
-                              src={candidate.logo}
-                              alt={candidate.partyName}
-                              className="h-full w-full object-contain p-1"
-                            />
-                          </div>
-
-                          <div className="min-w-0">
-                            <div className="truncate text-[11px] font-black text-[#24130A]">
-                              {candidate.partyName}
-                            </div>
-                            <div
-                              className="text-[10px] font-black uppercase"
-                              style={{ color: candidate.color }}
-                            >
-                              {candidate.partyShortName}
-                            </div>
-                          </div>
+                        <div className="mt-2 flex items-center justify-between text-[10px] font-bold text-orange-900/40">
+                          <span>{candidate.progress.toFixed(2)}% de votos</span>
+                          <span>{candidate.partyShortName}</span>
                         </div>
                       </div>
-                    ))}
+                    ))
+                  )}
+                </div>
+
+                <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <div className="rounded-2xl border border-orange-100 bg-white/60 p-4 text-center backdrop-blur-sm">
+                    <div className="text-[9px] font-black uppercase tracking-[0.16em] text-orange-900/50">
+                      Total actas
+                    </div>
+                    <RollingNumber
+                      value={loadingKpisGenerales ? '...' : formatNumber(totalActasKpi)}
+                      className="mt-1 block text-2xl font-black text-[#24130A] sm:text-3xl"
+                    />
+                    <div className="text-[10px] font-bold text-orange-900/40">
+                      Hay {formatNumber(totalActasKpi)} actas registradas
+                    </div>
                   </div>
 
-                  <div className="space-y-5">
-                    {liveTerritorialData.map((item, index) => (
-                      <div key={item.departamento}>
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-xs font-black text-[#24130A]">
-                            {item.departamento}
-                          </span>
+                  <div className="rounded-2xl border border-orange-100 bg-white/60 p-4 text-center backdrop-blur-sm">
+                    <div className="text-[9px] font-black uppercase tracking-[0.16em] text-orange-900/50">
+                      Votos especiales
+                    </div>
+                    <RollingNumber
+                      value={loadingKpisGenerales ? '...' : formatNumber(totalVotosEspecialesKpi)}
+                      className="mt-1 block text-2xl font-black text-[#24130A] sm:text-3xl"
+                    />
+                     <div className="text-[9px] font-black uppercase tracking-[0.16em] text-orange-900/50">
+                      Blanco / Nulo / Impugnado
+                    </div>
+                  </div>
 
-                          <span className="text-xs font-black text-orange-700">
-                            Fuerza Popular
-                          </span>
+                  <div className="rounded-2xl border border-orange-100 bg-white/60 p-4 text-center backdrop-blur-sm">
+                    <div className="text-[9px] font-black uppercase tracking-[0.16em] text-orange-900/50">
+                      Total votos
+                    </div>
+                    <RollingNumber
+                      value={loadingKpisGenerales ? '...' : formatNumber(totalVotosGeneralKpi)}
+                      className="mt-1 block text-2xl font-black text-[#24130A] sm:text-3xl"
+                    />
+                    <div className="text-[10px] font-bold text-orange-900/40">
+                      Votos partidos + votos especiales
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-orange-100 bg-white/60 p-4 text-center backdrop-blur-sm">
+                    <div className="text-[9px] font-black uppercase tracking-[0.16em] text-orange-900/50">
+                      Diferencia
+                    </div>
+                    <RollingNumber
+                      value={loadingKpisGenerales ? '...' : formatNumber(diferenciaPrimerSegundoKpi)}
+                      className="mt-1 block text-2xl font-black text-[#24130A] sm:text-3xl"
+                    />
+                    <div className="text-[10px] font-bold text-orange-900/40">
+                      El primer partido supera al segundo
+                    </div>
+                  </div>
+
+                  {errorKpisGenerales && (
+                    <div className="col-span-2 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-center text-[11px] font-bold text-red-700 md:col-span-4">
+                      {errorKpisGenerales}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
+            <Card className="h-full rounded-2xl border border-orange-100/80 bg-white shadow-sm">
+              <CardContent className="p-5">
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-black text-[#24130A]">
+                      Distribución territorial
+                    </h2>
+                    <p className="mt-0.5 text-[11px] font-medium text-orange-900/45">
+                      Comparativo dinámico por ubicación y partido
+                    </p>
+                  </div>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50">
+                    <MapPin className="h-4 w-4 text-orange-600" />
+                  </div>
+                </div>
+
+                <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <Select
+                    value={codDepartamentoTerritorial}
+                    onValueChange={handleDepartamentoTerritorialChange}
+                  >
+                    <SelectTrigger className={selectTriggerClass}>
+                      <SelectValue placeholder="Departamento" />
+                    </SelectTrigger>
+                    <SelectContent className={selectContentClass}>
+                      <SelectItem value={SELECT_TODOS} className={selectItemClass}>
+                        Todos los departamentos
+                      </SelectItem>
+                      {departamentosApi.map((item) => (
+                        <SelectItem
+                          key={item.CODDEPARTAMENTO}
+                          value={item.CODDEPARTAMENTO}
+                          className={selectItemClass}
+                        >
+                          {item.TXTNOMBRE}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={codProvinciaTerritorial}
+                    onValueChange={handleProvinciaTerritorialChange}
+                    disabled={codDepartamentoTerritorial === SELECT_TODOS}
+                  >
+                    <SelectTrigger className={selectTriggerClass}>
+                      <SelectValue placeholder="Provincia" />
+                    </SelectTrigger>
+                    <SelectContent className={selectContentClass}>
+                      <SelectItem value={SELECT_TODOS} className={selectItemClass}>
+                        Todas las provincias
+                      </SelectItem>
+                      {provinciasApi.map((item) => (
+                        <SelectItem
+                          key={item.CODPROVINCIA}
+                          value={item.CODPROVINCIA}
+                          className={selectItemClass}
+                        >
+                          {item.TXTNOMBRE}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={codDistritoTerritorial}
+                    onValueChange={handleDistritoTerritorialChange}
+                    disabled={codDepartamentoTerritorial === SELECT_TODOS || codProvinciaTerritorial === SELECT_TODOS}
+                  >
+                    <SelectTrigger className={selectTriggerClass}>
+                      <SelectValue placeholder="Distrito" />
+                    </SelectTrigger>
+                    <SelectContent className={selectContentClass}>
+                      <SelectItem value={SELECT_TODOS} className={selectItemClass}>
+                        Todos los distritos
+                      </SelectItem>
+                      {distritosApi.map((item) => (
+                        <SelectItem
+                          key={item.CODDISTRITO}
+                          value={item.CODDISTRITO}
+                          className={selectItemClass}
+                        >
+                          {item.TXTNOMBRE}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {hasTerritorialFilters && (
+                  <div className="mb-4 flex justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={limpiarFiltrosTerritoriales}
+                      className="h-8 text-xs text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+                    >
+                      <X className="mr-1 h-3.5 w-3.5" />
+                      Limpiar ubicación
+                    </Button>
+                  </div>
+                )}
+
+                {loadingTerritorial ? (
+                  <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-orange-100 bg-orange-50/50">
+                    <p className="text-xs font-bold text-orange-700">
+                      Cargando distribución territorial...
+                    </p>
+                  </div>
+                ) : errorTerritorial ? (
+                  <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-red-100 bg-red-50">
+                    <p className="text-xs font-bold text-red-700">
+                      {errorTerritorial}
+                    </p>
+                  </div>
+                ) : territorialData.length === 0 ? (
+                  <div className="flex min-h-[260px] items-center justify-center rounded-xl border border-orange-100 bg-orange-50/50">
+                    <p className="text-xs font-bold text-orange-700">
+                      No hay datos de distribución territorial
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {territorialData.map((item, index) => (
+                      <div key={`${item.codigoUbicacion}-${index}`}>
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-black text-[#24130A]">
+                              {item.nombreUbicacion}
+                            </div>
+                            <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-orange-900/40">
+                              {item.nivel} {item.codigoUbicacion ? `- ${item.codigoUbicacion}` : ''}
+                            </div>
+                          </div>
                         </div>
 
                         <div className="space-y-2">
-                          <div>
-                            <div className="mb-1 flex items-center justify-between text-[10px] font-bold">
-                              <div className="flex items-center gap-1.5 text-orange-700">
-                                <img
-                                  src="/images/k.png"
-                                  alt="Fuerza Popular"
-                                  className="h-4 w-4 rounded-full object-contain"
-                                />
-                                <span>Fuerza Popular</span>
+                          {item.partidos.map((party) => (
+                            <div key={`${item.codigoUbicacion}-${party.idPartido}`}>
+                              <div className="mb-1 flex items-center justify-between text-[10px] font-bold">
+                                <div
+                                  className="flex min-w-0 items-center gap-1.5"
+                                  style={{ color: party.color }}
+                                >
+                                  {party.logoPartido && (
+                                    <img
+                                      src={party.logoPartido}
+                                      alt={party.siglas}
+                                      className="h-4 w-4 shrink-0 rounded-full object-contain"
+                                    />
+                                  )}
+                                  <span className="truncate">{party.nombrePartido}</span>
+                                </div>
+
+                                <div className="flex shrink-0 items-center gap-2">
+                                  <span className="text-orange-900/40">
+                                    {formatNumber(party.totalVotos)} votos
+                                  </span>
+                                  <span style={{ color: party.color }}>
+                                    <RollingNumber value={`${party.porcentaje.toFixed(2)}%`} />
+                                  </span>
+                                </div>
                               </div>
-                              <span className="text-orange-700">
-                                <RollingNumber value={`${item.fuerzaPopular.toFixed(1)}%`} />
-                              </span>
-                            </div>
 
-                            <div className="h-2 overflow-hidden rounded-full bg-orange-100">
-                              <motion.div
-                                initial={false}
-                                animate={{ width: `${item.fuerzaPopular}%` }}
-                                transition={{
-                                  duration: 0.7,
-                                  delay: index * 0.08,
-                                  ease: [0.16, 1, 0.3, 1],
-                                }}
-                                className="h-full rounded-full bg-orange-500"
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <div className="mb-1 flex items-center justify-between text-[10px] font-bold">
-                              <div className="flex items-center gap-1.5 text-emerald-700">
-                                <img
-                                  src="/images/jp.jpg"
-                                  alt="Juntos por el Perú"
-                                  className="h-4 w-4 rounded-full object-contain"
+                              <div className="h-2 overflow-hidden rounded-full bg-orange-100">
+                                <motion.div
+                                  initial={false}
+                                  animate={{ width: `${Math.min(100, party.porcentaje)}%` }}
+                                  transition={{
+                                    duration: 0.7,
+                                    delay: index * 0.05,
+                                    ease: [0.16, 1, 0.3, 1],
+                                  }}
+                                  className="h-full rounded-full"
+                                  style={{ backgroundColor: party.color }}
                                 />
-                                <span>Juntos por el Perú</span>
                               </div>
-                              <span className="text-emerald-700">
-                                <RollingNumber value={`${item.partidoDelPueblo.toFixed(1)}%`} />
-                              </span>
                             </div>
-
-                            <div className="h-2 overflow-hidden rounded-full bg-emerald-100">
-                              <motion.div
-                                initial={false}
-                                animate={{ width: `${item.partidoDelPueblo}%` }}
-                                transition={{
-                                  duration: 0.7,
-                                  delay: index * 0.08 + 0.1,
-                                  ease: [0.16, 1, 0.3, 1],
-                                }}
-                                className="h-full rounded-full bg-emerald-500"
-                              />
-                            </div>
-                          </div>
+                          ))}
                         </div>
                       </div>
                     ))}
                   </div>
+                )}
 
-                  <Button
-                    variant="outline"
-                    className="mt-6 h-9 w-full rounded-xl border-orange-200 bg-white text-xs font-black uppercase tracking-[0.08em] text-orange-700 hover:bg-orange-50"
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    Ver detalle territorial
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
+               
+              </CardContent>
+            </Card>
+          </motion.div>
 
+          <div className="space-y-5">
             <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
-              <Card className="rounded-2xl border border-orange-100 bg-white shadow-sm">
+              <Card className="rounded-2xl border border-orange-100/80 bg-white shadow-sm">
                 <CardContent className="p-5">
                   <div className="mb-4 flex items-center justify-between">
                     <div>
-                      <h2 className="text-lg font-black text-[#24130A]">
+                      <h2 className="text-base font-black text-[#24130A]">
                         Línea de tiempo
                       </h2>
-                      <p className="mt-1 text-xs font-medium text-orange-900/50">
-                        Flujo de votos registrados por hora.
+                      <p className="mt-0.5 text-[11px] font-medium text-orange-900/45">
+                        Flujo de votos por hora
                       </p>
                     </div>
-                    <Clock className="h-5 w-5 text-orange-600" />
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50">
+                      <Clock className="h-4 w-4 text-orange-600" />
+                    </div>
                   </div>
 
                   <div className="h-[170px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={liveTimeline}>
-                        <XAxis
-                          dataKey="hora"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fontSize: 10, fill: '#9A3412', fontWeight: 700 }}
-                        />
-                        <YAxis hide />
-                        <Tooltip
-                          cursor={{ fill: 'rgba(249, 115, 22, 0.08)' }}
-                          contentStyle={{
-                            border: '1px solid #FED7AA',
-                            borderRadius: 12,
-                            fontSize: 12,
-                          }}
-                        />
-                        <Bar dataKey="votos" radius={[6, 6, 0, 0]}>
-                          {liveTimeline.map((_, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={
-                                index === liveTimeline.length - 1
-                                  ? PRIMARY
-                                  : index >= liveTimeline.length - 2
-                                    ? PRIMARY_LIGHT
-                                    : '#FED7AA'
-                              }
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    {loadingLineaTiempo ? (
+                      <div className="flex h-full items-center justify-center rounded-xl border border-orange-100 bg-orange-50/50">
+                        <p className="text-xs font-bold text-orange-700">
+                          Cargando línea de tiempo...
+                        </p>
+                      </div>
+                    ) : errorLineaTiempo ? (
+                      <div className="flex h-full items-center justify-center rounded-xl border border-red-100 bg-red-50">
+                        <p className="text-xs font-bold text-red-700">
+                          {errorLineaTiempo}
+                        </p>
+                      </div>
+                    ) : liveTimeline.length === 0 ? (
+                      <div className="flex h-full items-center justify-center rounded-xl border border-orange-100 bg-orange-50/50">
+                        <p className="text-xs font-bold text-orange-700">
+                          No hay datos de línea de tiempo
+                        </p>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={liveTimeline}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#FFF0E0" />
+                          <XAxis
+                            dataKey="hora"
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 10, fill: '#9A3412', fontWeight: 700 }}
+                          />
+                          <YAxis hide />
+                          <Tooltip
+                            cursor={{ fill: 'rgba(249, 115, 22, 0.06)' }}
+                            content={<CustomChartTooltip />}
+                          />
+                          <Bar dataKey="votos" radius={[6, 6, 0, 0]}>
+                            {liveTimeline.map((_, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={
+                                  index === liveTimeline.length - 1
+                                    ? PRIMARY
+                                    : index >= liveTimeline.length - 2
+                                      ? PRIMARY_LIGHT
+                                      : '#FED7AA'
+                                }
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
+
+           
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={sectionVariants}
-            className="min-w-0"
-          >
-            <Card className="h-full rounded-2xl border border-orange-100 bg-white shadow-sm">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50">
-                    <Vote className="h-4 w-4 text-orange-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base font-black text-[#24130A]">
-                      Resultados por partido
-                    </CardTitle>
-                    <CardDescription className="text-xs text-orange-900/50">
-                      Simulación de votos acumulados por agrupación.
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <div className="space-y-3">
-                  {liveCandidates.map((partido, idx) => {
-                    const maxVotos = Math.max(...liveCandidates.map((p) => p.votes));
-                    const barWidth = maxVotos > 0 ? (partido.votes / maxVotos) * 100 : 0;
-
-                    return (
-                      <motion.div
-                        key={partido.id}
-                        initial={{ opacity: 0, x: -18 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{
-                          delay: idx * 0.05,
-                          duration: 0.35,
-                          ease: [0.16, 1, 0.3, 1],
-                        }}
-                        className="rounded-xl border border-orange-100 p-3 hover:bg-orange-50/40"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm">
-                            <img
-                              src={partido.logo}
-                              alt={partido.partyName}
-                              className="h-full w-full object-contain p-1"
-                            />
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-1 flex items-center justify-between gap-3">
-                              <span className="truncate text-sm font-black text-[#24130A]">
-                                {partido.partyName}
-                              </span>
-
-                              <div className="flex shrink-0 items-center gap-2">
-                                <RollingNumber
-                                  value={formatNumber(partido.votes)}
-                                  className="text-sm font-black text-[#24130A]"
-                                />
-                                <span
-                                  className="rounded-lg px-2 py-0.5 text-xs font-black"
-                                  style={{
-                                    backgroundColor: partido.accent,
-                                    color: partido.color,
-                                  }}
-                                >
-                                  <RollingNumber value={`${partido.progress.toFixed(1)}%`} />
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="h-2 overflow-hidden rounded-full bg-orange-100">
-                              <motion.div
-                                initial={false}
-                                animate={{ width: `${barWidth}%` }}
-                                transition={{
-                                  duration: 0.8,
-                                  ease: [0.16, 1, 0.3, 1],
-                                  delay: 0.2 + idx * 0.05,
-                                }}
-                                className="h-full rounded-full"
-                                style={{ backgroundColor: partido.color }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={sectionVariants}
-            className="min-w-0"
-          >
-            <Card className="h-full rounded-2xl border border-orange-100 bg-white shadow-sm">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50">
-                    <BarChart3 className="h-4 w-4 text-orange-600" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base font-black text-[#24130A]">
-                      Votos por departamento
-                    </CardTitle>
-                    <CardDescription className="text-xs text-orange-900/50">
-                      Distribución geográfica acumulada.
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent>
-                <ChartContainer config={barConfig} className="aspect-[4/3] max-h-[280px]">
-                  <BarChart data={liveDepartmentVotes} layout="vertical" margin={{ left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#FFEDD5" />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: '#9A3412' }} />
-                    <YAxis
-                      dataKey="departamento"
-                      type="category"
-                      tick={{ fontSize: 11, fill: '#9A3412' }}
-                      width={85}
-                    />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="votos" fill={PRIMARY} radius={[0, 8, 8, 0]} />
-                  </BarChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-
         <motion.div initial="hidden" animate="visible" variants={sectionVariants}>
-          <Card className="rounded-2xl border border-orange-100 bg-white shadow-sm">
+          <Card className="overflow-hidden rounded-2xl border border-orange-100/80 bg-white shadow-sm">
             <CardContent className="p-0">
-              <div className="flex flex-col gap-4 border-b border-orange-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-4 border-b border-orange-100/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-lg font-black text-[#24130A]">
+                  <h2 className="text-base font-black text-[#24130A]">
                     Últimas actas recibidas
                   </h2>
-                  <p className="mt-1 text-xs font-medium text-orange-900/50">
-                    Registro operativo simulado en tiempo real.
+                  <p className="mt-0.5 text-[11px] font-medium text-orange-900/45">
+                    Registro operativo simulado en tiempo real
                   </p>
                 </div>
 
@@ -1402,7 +1714,7 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                     <Filter className="h-4 w-4" />
                   </Button>
 
-                  <Button className="h-9 rounded-xl bg-orange-600 px-4 text-xs font-black uppercase tracking-[0.08em] text-white hover:bg-orange-700">
+                  <Button className="h-9 rounded-xl bg-orange-600 px-4 text-[11px] font-bold uppercase tracking-[0.08em] text-white hover:bg-orange-700">
                     <Download className="mr-2 h-4 w-4" />
                     Descargar reporte
                   </Button>
@@ -1412,20 +1724,20 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
               <div className="overflow-x-auto">
                 <Table className="min-w-[820px]">
                   <TableHeader>
-                    <TableRow className="border-orange-100 bg-orange-50 hover:bg-orange-50">
-                      <TableHead className="h-11 w-[170px] whitespace-nowrap text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
+                    <TableRow className="border-orange-100/80 bg-orange-50/60 hover:bg-orange-50/60">
+                      <TableHead className="h-10 w-[170px] whitespace-nowrap text-[9px] font-black uppercase tracking-[0.14em] text-orange-800/60">
                         ID acta
                       </TableHead>
-                      <TableHead className="h-11 min-w-[260px] whitespace-nowrap text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
+                      <TableHead className="h-10 min-w-[260px] whitespace-nowrap text-[9px] font-black uppercase tracking-[0.14em] text-orange-800/60">
                         Ubicación
                       </TableHead>
-                      <TableHead className="h-11 w-[160px] whitespace-nowrap text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
+                      <TableHead className="h-10 w-[160px] whitespace-nowrap text-[9px] font-black uppercase tracking-[0.14em] text-orange-800/60">
                         Estado
                       </TableHead>
-                      <TableHead className="h-11 w-[120px] whitespace-nowrap text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
+                      <TableHead className="h-10 w-[120px] whitespace-nowrap text-[9px] font-black uppercase tracking-[0.14em] text-orange-800/60">
                         Mesa
                       </TableHead>
-                      <TableHead className="h-11 w-[150px] whitespace-nowrap text-right text-[10px] font-black uppercase tracking-[0.12em] text-orange-800/70">
+                      <TableHead className="h-10 w-[150px] whitespace-nowrap text-right text-[9px] font-black uppercase tracking-[0.14em] text-orange-800/60">
                         Hora registro
                       </TableHead>
                     </TableRow>
@@ -1433,11 +1745,8 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
 
                   <TableBody>
                     {liveActas.map((acta) => (
-                      <TableRow
-                        key={acta.id}
-                        className="border-orange-100 hover:bg-orange-50/50"
-                      >
-                        <TableCell className="py-4 text-sm font-black text-[#24130A]">
+                      <TableRow key={acta.id} className="border-orange-100/60 hover:bg-orange-50/40">
+                        <TableCell className="py-3.5 text-sm font-black text-[#24130A]">
                           <div className="flex items-center gap-2">
                             <span
                               className={`h-1.5 w-1.5 rounded-full ${
@@ -1452,24 +1761,24 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                           </div>
                         </TableCell>
 
-                        <TableCell className="py-4">
+                        <TableCell className="py-3.5">
                           <div className="text-sm font-black text-[#24130A]">
                             {acta.ubicacion}
                           </div>
-                          <div className="mt-0.5 text-[10px] font-semibold text-orange-900/45">
+                          <div className="mt-0.5 text-[10px] font-semibold text-orange-900/40">
                             {acta.centro}
                           </div>
                         </TableCell>
 
-                        <TableCell className="py-4">
+                        <TableCell className="py-3.5">
                           {getStatusBadge(acta.estado)}
                         </TableCell>
 
-                        <TableCell className="py-4 text-sm font-black text-[#24130A]">
+                        <TableCell className="py-3.5 text-sm font-black text-[#24130A]">
                           <RollingNumber value={acta.mesa} />
                         </TableCell>
 
-                        <TableCell className="py-4 text-right text-sm font-black text-[#24130A]">
+                        <TableCell className="py-3.5 text-right text-sm font-black text-[#24130A]">
                           {acta.horaRegistro}
                         </TableCell>
                       </TableRow>
@@ -1478,10 +1787,10 @@ export default function Dashboard({ filtros, onFiltrosChange }: DashboardProps) 
                 </Table>
               </div>
 
-              <div className="border-t border-orange-100 py-4 text-center">
+              <div className="border-t border-orange-100/80 py-3.5 text-center">
                 <Button
                   variant="ghost"
-                  className="h-8 text-xs font-black uppercase tracking-[0.12em] text-orange-700 hover:bg-orange-50"
+                  className="h-8 text-[11px] font-bold uppercase tracking-[0.12em] text-orange-700 hover:bg-orange-50"
                 >
                   Cargar más actas
                 </Button>
@@ -1503,6 +1812,7 @@ function RollingNumber({ value, className = '', style }: RollingNumberProps) {
     if (character === '.') return '0.22em';
     if (character === '%') return '0.58em';
     if (character === ' ') return '0.28em';
+
     return '0.58em';
   };
 
@@ -1516,36 +1826,15 @@ function RollingNumber({ value, className = '', style }: RollingNumberProps) {
         <span
           key={`${index}-${character}`}
           className="relative inline-flex h-[1.18em] overflow-visible align-baseline leading-none"
-          style={{
-            minWidth: getCharacterWidth(character),
-            perspective: 120,
-          }}
+          style={{ minWidth: getCharacterWidth(character), perspective: 120 }}
         >
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.span
               key={`${character}-${index}-${text}`}
-              initial={{
-                y: '0.9em',
-                rotateX: 90,
-                opacity: 0,
-                filter: 'blur(2px)',
-              }}
-              animate={{
-                y: '0em',
-                rotateX: 0,
-                opacity: 1,
-                filter: 'blur(0px)',
-              }}
-              exit={{
-                y: '-0.9em',
-                rotateX: -90,
-                opacity: 0,
-                filter: 'blur(2px)',
-              }}
-              transition={{
-                duration: 0.7,
-                ease: [0.16, 1, 0.3, 1],
-              }}
+              initial={{ y: '0.9em', rotateX: 90, opacity: 0, filter: 'blur(2px)' }}
+              animate={{ y: '0em', rotateX: 0, opacity: 1, filter: 'blur(0px)' }}
+              exit={{ y: '-0.9em', rotateX: -90, opacity: 0, filter: 'blur(2px)' }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
               className="inline-block origin-center leading-none"
             >
               {character === ' ' ? '\u00A0' : character}
@@ -1561,10 +1850,6 @@ function randomInt(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function randomFloat(min: number, max: number) {
-  return Math.random() * (max - min) + min;
-}
-
 function createLiveActaRow(): LiveActaRow {
   const locations = [
     { ubicacion: 'Lima, San Isidro', centro: 'I.E. Alfonso Ugarte' },
@@ -1575,17 +1860,24 @@ function createLiveActaRow(): LiveActaRow {
     { ubicacion: 'La Libertad, Trujillo', centro: 'Colegio Modelo' },
   ];
 
-  const estados: LiveActaRow['estado'][] = ['validada', 'validada', 'validada', 'pendiente', 'observada'];
-  const selectedLocation = locations[randomInt(0, locations.length - 1)];
-  const selectedStatus = estados[randomInt(0, estados.length - 1)];
-  const actaNumber = randomInt(92841, 99999);
+  const estados: LiveActaRow['estado'][] = [
+    'validada',
+    'validada',
+    'validada',
+    'pendiente',
+    'observada',
+  ];
+
+  const loc = locations[randomInt(0, locations.length - 1)];
+  const status = estados[randomInt(0, estados.length - 1)];
+  const num = randomInt(92841, 99999);
   const letter = String.fromCharCode(65 + randomInt(0, 25));
 
   return {
-    id: `#ACT-${actaNumber}-${letter}`,
-    ubicacion: selectedLocation.ubicacion,
-    centro: selectedLocation.centro,
-    estado: selectedStatus,
+    id: `#ACT-${num}-${letter}`,
+    ubicacion: loc.ubicacion,
+    centro: loc.centro,
+    estado: status,
     mesa: String(randomInt(10000, 99999)).padStart(6, '0'),
     horaRegistro: 'Hace 0 min',
   };
@@ -1594,9 +1886,7 @@ function createLiveActaRow(): LiveActaRow {
 function updateRelativeTime(index: number) {
   const minutes = Math.max(1, index * randomInt(2, 4));
 
-  if (minutes < 60) {
-    return `Hace ${minutes} min`;
-  }
+  if (minutes < 60) return `Hace ${minutes} min`;
 
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
